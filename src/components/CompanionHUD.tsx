@@ -413,7 +413,7 @@ export const CompanionHUD = memo(function CompanionHUD({
 
   // Check if sprite is flipped by default and needs correction
   const isFlippedByDefault = () => {
-    return ['pichimon', 'chicomon', 'yukimibotamon', 'pukamon'].includes(evolutionStage.toLowerCase());
+    return ['pichimon', 'chicomon', 'yukimibotamon', 'pukamon', 'tapirmon'].includes(evolutionStage.toLowerCase());
   };
 
   // Get the correct horizontal flip for the sprite
@@ -686,7 +686,7 @@ export const CompanionHUD = memo(function CompanionHUD({
                 left: `${position}%`,
                 transform: getHorizontalFlip(),
                 top: '50%',
-                marginTop: '-40px',
+                marginTop: '-35px',
                 transition: 'left 0.1s ease-linear, transform 0.1s ease-linear'
               }}
               onClick={handleDigimonClick}
