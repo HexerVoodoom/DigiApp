@@ -86,6 +86,13 @@ Estágios/HP máx: digiegg,baby-i=1 · baby-ii=2 · rookie/champion/ultimate=3 �
   Console. Web Push continua ativo (cobre PWA/desktop); os dois convivem.
 - Widgets Android: `android/.../widget/WidgetRenderer.kt` + layouts. Dados via
   `DigiWidgetPlugin` (SharedPreferences). Testes: `npx vitest run` cobre lógica de reset.
+- **Desktop (Windows)**: `desktop/` — Electron, pet overlay estilo Bongo Cat na
+  barra de tarefas (faixa transparente always-on-top, click-through fora do
+  pet/menu; clique no pet = menu carinho/comida/banho/sono/tarefas). Projeto npm
+  PRÓPRIO (`cd desktop && npm install`); checks lá dentro: `npx tsc --noEmit` +
+  `npx vite build`. CI `desktop-build.yml` gera os `.exe` no push de `desktop/**`.
+  Estado v1 é local (`digiapp_desktop_v1`) — sincronização com o mobile via
+  cloud save está NO RADAR: plano em `desktop/README.md` (seção Roadmap).
 
 ## Footguns (aprendidos a dor — não repita)
 

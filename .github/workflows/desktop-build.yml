@@ -1,0 +1,42 @@
+name: Desktop Windows Build
+
+on:
+  push:
+    branches: [main, version-b, 'claude/digiapp-desktop-pet-overlay-zb5o0o']
+    paths: ['desktop/**', '.github/workflows/desktop-build.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Typecheck renderer
+        working-directory: desktop
+        run: npx tsc --noEmit
+
+      - name: Build renderer + Windows executables
+        working-directory: desktop
+        run: npm run dist
+        env:
+          # Sem certificado de assinatura — não tentar auto-descobrir um
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digiapp-desktop-windows
+          path: |
+            desktop/release/*.exe
+          retention-days: 30
