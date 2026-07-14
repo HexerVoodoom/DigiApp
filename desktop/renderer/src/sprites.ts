@@ -13,13 +13,13 @@ for (const [file, url] of Object.entries(modules)) {
 
 export const PET_NAMES = Object.keys(PET_SPRITES).sort();
 
-export const DEFAULT_PET = 'agumon';
+export const DEFAULT_PET = 'triceramon';
 
 export function petSprite(name: string): string {
   return PET_SPRITES[name] ?? PET_SPRITES[DEFAULT_PET];
 }
 
-/** Nome de exibição: "agumon" → "Agumon". */
+/** Nome de exibição: "triceramon" → "Triceramon". */
 export function petLabel(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
