@@ -2,7 +2,7 @@
   "name": "digiapp-desktop",
   "productName": "DigiApp Desktop",
   "description": "Pet virtual do DigiApp como overlay na barra de tarefas do Windows",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -10,7 +10,11 @@
     "typecheck": "tsc --noEmit",
     "dev": "vite build && electron .",
     "start": "electron .",
-    "dist": "vite build && electron-builder --win"
+    "dist": "vite build && electron-builder --win",
+    "dist:publish": "vite build && electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -31,14 +35,18 @@
     "icon": "electron/assets/icon.png",
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        { "target": "nsis", "arch": ["x64"] }
       ]
     },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
       "deleteAppDataOnUninstall": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "HexerVoodoom",
+      "repo": "DigiApp"
     }
   }
 }

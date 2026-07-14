@@ -2,16 +2,22 @@
 // Cria uma faixa transparente, sempre no topo, encostada na barra de tarefas
 // do Windows. O pet anda nessa faixa; a janela é "click-through" (cliques
 // atravessam para o que estiver embaixo) exceto quando o mouse está sobre o
-// pet ou o menu — o renderer avisa via IPC ('set-interactive').
+// pet — o renderer avisa via IPC ('set-interactive'). Clicar no pet abre uma
+// janela separada (estilo Windows 98) com o menu de ações.
 const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage } = require('electron');
 const path = require('node:path');
+const { autoUpdater } = require('electron-updater');
 
-// Altura da faixa: o pet fica no rodapé (~96px) e o menu/balão abre acima.
-const STRIP_HEIGHT = 360;
+// Altura da faixa: pet (~96px) + espaço pro balão de fala acima dele. O menu
+// agora é uma janela própria (ver createMenuWindow), não precisa mais caber aqui.
+const STRIP_HEIGHT = 180;
 const FULL_APP_URL = 'https://digiapp-a5e.pages.dev';
+const MENU_SIZE = { width: 340, height: 480 };
 
 /** @type {BrowserWindow | null} */
 let overlayWin = null;
+/** @type {BrowserWindow | null} */
+let menuWin = null;
 /** @type {BrowserWindow | null} */
 let fullAppWin = null;
 /** @type {Tray | null} */
@@ -31,8 +37,27 @@ if (!gotLock) {
     screen.on('display-metrics-changed', positionOverlay);
     screen.on('display-added', positionOverlay);
     screen.on('display-removed', positionOverlay);
+
+    if (app.isPackaged) {
+      checkForUpdates();
+      setInterval(checkForUpdates, 4 * 60 * 60 * 1000); // a cada 4h
+    }
   });
 }
+
+function checkForUpdates() {
+  autoUpdater.checkForUpdatesAndNotify().catch(() => {
+    // Sem internet ou sem release publicado ainda — silencioso, tenta de novo depois.
+  });
+}
+
+// Baixa sozinho e instala na próxima vez que o app fechar — nunca precisa
+// baixar/rodar o instalador de novo manualmente a partir do GitHub.
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.on('update-downloaded', () => {
+  if (overlayWin) overlayWin.webContents.send('update-ready');
+});
 
 function positionOverlay() {
   if (!overlayWin) return;
@@ -83,6 +108,42 @@ function createOverlay() {
   overlayWin.on('closed', () => { overlayWin = null; });
 }
 
+function createMenuWindow() {
+  if (menuWin) {
+    menuWin.show();
+    menuWin.focus();
+    return;
+  }
+  menuWin = new BrowserWindow({
+    width: MENU_SIZE.width,
+    height: MENU_SIZE.height,
+    frame: false,
+    resizable: false,
+    show: false,
+    skipTaskbar: false,
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    title: 'DigiApp',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  // Abre perto do canto inferior direito da tela principal (acima da taskbar).
+  const wa = screen.getPrimaryDisplay().workArea;
+  menuWin.setBounds({
+    x: wa.x + wa.width - MENU_SIZE.width - 24,
+    y: wa.y + wa.height - MENU_SIZE.height - 24,
+    width: MENU_SIZE.width,
+    height: MENU_SIZE.height,
+  });
+
+  menuWin.loadFile(path.join(__dirname, '..', 'dist-renderer', 'menu.html'));
+  menuWin.once('ready-to-show', () => menuWin.show());
+  menuWin.on('closed', () => { menuWin = null; });
+}
+
 function createTray() {
   const icon = nativeImage
     .createFromPath(path.join(__dirname, 'assets', 'icon.png'))
@@ -97,10 +158,12 @@ function createTray() {
         overlayWin.isVisible() ? overlayWin.hide() : overlayWin.showInactive();
       },
     },
+    { label: 'Abrir menu', click: createMenuWindow },
     { label: 'Abrir DigiApp completo', click: openFullApp },
     { type: 'separator' },
     { label: 'Sair', click: () => app.quit() },
   ]));
+  tray.on('click', createMenuWindow);
 }
 
 function openFullApp() {
@@ -109,7 +172,8 @@ function openFullApp() {
     return;
   }
   // O app web completo (mesmo do celular): logando com o mesmo e-mail, o
-  // cloud save já sincroniza o progresso — o overlay ainda não (ver README).
+  // cloud save já sincroniza o progresso — o overlay lê o mesmo save (ver
+  // cloudSync.ts) mas ainda não escreve ações de volta (ver README).
   fullAppWin = new BrowserWindow({
     width: 480,
     height: 860,
@@ -126,8 +190,23 @@ ipcMain.on('set-interactive', (_e, on) => {
   overlayWin.setIgnoreMouseEvents(!on, { forward: true });
 });
 
+ipcMain.on('open-menu', createMenuWindow);
 ipcMain.on('open-full-app', openFullApp);
-ipcMain.on('overlay-quit', () => app.quit());
+// Fecha o APP inteiro (overlay + menu + tray) — não só a janela do menu.
+ipcMain.on('app-quit', () => app.quit());
+// Minimiza só a janela do menu (vira ícone na barra de tarefas do Windows).
+ipcMain.on('menu-minimize', () => { menuWin?.minimize(); });
+// Estado mudou numa janela (menu) — avisa o overlay pra recarregar e refletir
+// o sprite/hearts atualizados sem precisar reiniciar o app.
+ipcMain.on('state-changed', (event) => {
+  for (const win of [overlayWin, menuWin]) {
+    if (win && win.webContents !== event.sender) win.webContents.send('state-changed');
+  }
+});
+// Ação feita no menu (carinho/comida/banho/tarefa) — overlay toca a animação.
+ipcMain.on('pet-effect', (_event, emoji, phrase) => {
+  if (overlayWin) overlayWin.webContents.send('pet-effect', emoji, phrase);
+});
 
 app.on('window-all-closed', () => {
   // Overlay é o app: fechar tudo = sair (sem comportamento macOS de ficar vivo).

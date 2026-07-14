@@ -2,9 +2,14 @@ name: Desktop Windows Build
 
 on:
   push:
-    branches: [main, version-b, 'claude/digiapp-desktop-pet-overlay-zb5o0o']
+    branches: [main, version-b, 'claude/digiapp-desktop-pet-overlay-zb5o0o', 'claude/desktop-pet-window-style-ud89ee']
     paths: ['desktop/**', '.github/workflows/desktop-build.yml']
   workflow_dispatch:
+
+# Precisa de contents:write pra electron-builder publicar/atualizar o GitHub
+# Release que o electron-updater usa como fonte do auto-update.
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,12 +31,13 @@ jobs:
         working-directory: desktop
         run: npx tsc --noEmit
 
-      - name: Build renderer + Windows executables
+      - name: Build, publish GitHub Release (auto-update source) + upload .exe
         working-directory: desktop
-        run: npm run dist
+        run: npm run dist:publish
         env:
           # Sem certificado de assinatura — não tentar auto-descobrir um
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

@@ -26,6 +26,10 @@ export interface DesktopState {
   maxEnergy: number;
   /** Dia (YYYY-MM-DD) em que o carinho já curou — máx. 1×/dia, igual ao mobile. */
   rubHealDay: string | null;
+  /** E-mail usado pro cloud save (mesmo do app mobile/web) — null = nunca configurado. */
+  syncEmail: string | null;
+  /** ISO da última vez que puxamos o GameState real da nuvem. */
+  lastSyncAt: string | null;
 }
 
 const KEY = 'digiapp_desktop_v1';
@@ -47,6 +51,8 @@ function defaults(): DesktopState {
     energy: 0,
     maxEnergy: 4,
     rubHealDay: null,
+    syncEmail: null,
+    lastSyncAt: null,
   };
 }
 

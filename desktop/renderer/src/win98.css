@@ -1,0 +1,185 @@
+/* Estilo Windows 98 pra janela de menu do pet (frame:false + chrome falso). */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  background: #c0c0c0;
+  font-family: 'MS Sans Serif', 'Tahoma', ui-sans-serif, sans-serif;
+  font-size: 12px;
+  color: #000;
+}
+
+#win {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border: 2px solid;
+  border-color: #fff #000 #000 #fff;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+}
+
+/* ------------------------------------------------------------- title bar */
+#titlebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 3px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  font-weight: bold;
+  -webkit-app-region: drag;
+}
+#titlebar-icon { font-size: 13px; -webkit-app-region: no-drag; }
+#titlebar-title { flex: 1; font-size: 12px; letter-spacing: 0.2px; }
+#titlebar-btns { display: flex; gap: 2px; -webkit-app-region: no-drag; }
+
+.tb-btn {
+  width: 20px;
+  height: 18px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+  color: #000;
+  font-family: 'Marlett', ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+}
+.tb-btn:active {
+  border-color: #000 #fff #fff #000;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #dfdfdf;
+}
+.tb-btn-close:hover { background: #e81123; color: #fff; }
+
+/* ------------------------------------------------------------------ body */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #808080;
+}
+.panel-title { font-weight: bold; font-size: 13px; }
+.panel-stats { margin-left: auto; font-size: 11px; }
+
+.back-btn {
+  width: 20px;
+  height: 20px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+  cursor: pointer;
+  font-weight: bold;
+}
+.back-btn:active {
+  border-color: #000 #fff #fff #000;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #dfdfdf;
+}
+
+.win98-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+  box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: #000;
+}
+.win98-btn:active {
+  border-color: #000 #fff #fff #000;
+  box-shadow: inset 1px 1px 0 #808080, inset -1px -1px 0 #dfdfdf;
+}
+.win98-btn.muted { color: #444; }
+
+.badge {
+  margin-left: auto;
+  background: #000080;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* -------------------------------------------------------------- tarefas */
+.task-list { display: flex; flex-direction: column; gap: 3px; }
+.task-empty { font-size: 11px; padding: 6px 2px; color: #444; }
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #fff;
+  border: 1px solid #808080;
+}
+.task-row.done .task-name { text-decoration: line-through; color: #666; }
+.task-toggle { background: none; border: none; font-size: 14px; cursor: pointer; }
+.task-name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-del { background: none; border: none; font-size: 11px; cursor: pointer; }
+.task-del:hover { color: #e81123; }
+
+.field-row { display: flex; flex-direction: column; gap: 4px; }
+.field-row input[type='text'],
+.field-row input[type='email'] {
+  padding: 5px 6px;
+  background: #fff;
+  border: 1px solid;
+  border-color: #808080 #fff #fff #808080;
+  box-shadow: inset 1px 1px 0 #000;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.field-hint { font-size: 10px; color: #444; }
+.field-hint.error { color: #b00000; }
+.field-hint.ok { color: #006000; }
+
+/* ----------------------------------------------------- escolha de pet */
+.pet-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.pet-cell {
+  background: #fff;
+  border: 1px solid #808080;
+  padding: 2px;
+  cursor: pointer;
+}
+.pet-cell img { width: 100%; image-rendering: pixelated; display: block; }
+.pet-cell.active { border-color: #000080; box-shadow: 0 0 0 1px #000080; }
+.pet-cell:hover { border-color: #1084d0; }
+
+#content::-webkit-scrollbar { width: 14px; }
+#content::-webkit-scrollbar-track { background: #dfdfdf; }
+#content::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+}

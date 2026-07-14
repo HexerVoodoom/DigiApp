@@ -88,11 +88,37 @@ Estágios/HP máx: digiegg,baby-i=1 · baby-ii=2 · rookie/champion/ultimate=3 �
   `DigiWidgetPlugin` (SharedPreferences). Testes: `npx vitest run` cobre lógica de reset.
 - **Desktop (Windows)**: `desktop/` — Electron, pet overlay estilo Bongo Cat na
   barra de tarefas (faixa transparente always-on-top, click-through fora do
-  pet/menu; clique no pet = menu carinho/comida/banho/sono/tarefas). Projeto npm
-  PRÓPRIO (`cd desktop && npm install`); checks lá dentro: `npx tsc --noEmit` +
-  `npx vite build`. CI `desktop-build.yml` gera os `.exe` no push de `desktop/**`.
-  Estado v1 é local (`digiapp_desktop_v1`) — sincronização com o mobile via
-  cloud save está NO RADAR: plano em `desktop/README.md` (seção Roadmap).
+  pet; `DEFAULT_PET`/sprite default hoje é `triceramon`, com um GIF próprio do
+  desktop em `src/assets/triceramon_dpc.gif`). Projeto npm PRÓPRIO
+  (`cd desktop && npm install`); checks lá dentro: `npx tsc --noEmit` +
+  `npx vite build`. Clicar no pet abre uma **janela separada** (`menu.html`/
+  `menu.ts`, estilo Windows 98 via `win98.css`, chrome falso porque
+  `frame:false`) com 3 botões na barra de título: ⚙ configurações, `_`
+  minimiza só essa janela, `✕` fecha o **app inteiro** (`app.quit()`, IPC
+  `app-quit`). Overlay e menu são janelas/processos separados que só
+  conversam por IPC (`preload.js` expõe `window.digiDesktop`); mudanças de
+  estado disparam `state-changed` pra outra janela recarregar, e ações
+  (carinho/comida/banho/tarefa) disparam `pet-effect` pro overlay tocar a
+  animação (o pet visível é a faixa, não a janela do menu).
+  Sprites: `desktop/renderer/src/sprites.ts` reaproveita o `STAGE_SPRITES`
+  completo de `src/utils/sprites.ts` (todas as formas, não só as 25 "_dmc") —
+  precisa do alias `figma:asset/<hash>.png` gerado dinamicamente em
+  `desktop/vite.config.ts` a partir de `src/assets/`.
+  **Sincronização (parcial, só leitura)**: aba Configurações tem campo de
+  e-mail — `cloudSync.ts` faz `GET /api/save?id=sha256(email)` (mesmo
+  mecanismo do `src/utils/cloudSave.ts`) e usa `evolutionStage`/`healthPoints`
+  do GameState real só pra mostrar o Digimon/HP corretos no overlay. Ações do
+  menu (feed/pet/tarefas) ainda mexem só no estado local
+  (`digiapp_desktop_v1`) — sincronização bidirecional completa continua no
+  radar (plano em `desktop/README.md`, seção Roadmap).
+  **Auto-update**: `electron-updater` (`main.js`) baixa em segundo plano e
+  instala sozinho ao fechar o app (`autoInstallOnAppQuit`) — não precisa
+  baixar o instalador manualmente nunca mais. Fonte: GitHub Releases do
+  próprio repo (`package.json` → `build.publish`); `desktop-build.yml` roda
+  `npm run dist:publish` com `permissions: contents: write` pra criar/atualizar
+  o release a cada push em `desktop/**`. **Bump a versão em
+  `desktop/package.json` antes de mudanças que devam disparar update** — o
+  updater só baixa se a versão do release for maior que a instalada.
 
 ## Footguns (aprendidos a dor — não repita)
 

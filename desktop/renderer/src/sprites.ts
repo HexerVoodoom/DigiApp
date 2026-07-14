@@ -1,19 +1,20 @@
-// Sprites DMC (128×128, frame único, virados para a ESQUERDA) — os mesmos
-// arquivos reais do app web em src/assets/*_dmc.png.
-const modules = import.meta.glob<string>('../../../src/assets/*_dmc.png', {
-  eager: true,
-  import: 'default',
-});
+// Reaproveita o mapa canônico de sprites do app principal (todas as formas,
+// não só as 25 "_dmc") — assim qualquer Digimon que o mobile mostra (ex.:
+// triceramon, ultimate da linha principal) também aparece certo no desktop.
+// Precisa do alias figma:asset/<hash>.png gerado em vite.config.ts.
+import { STAGE_SPRITES } from '../../../src/utils/sprites';
+// GIF animado enviado pelo dono do projeto especificamente pro pet do
+// desktop (substitui o estático usado no app mobile só nessa tela).
+import triceramonGif from '../../../src/assets/triceramon_dpc.gif';
 
-export const PET_SPRITES: Record<string, string> = {};
-for (const [file, url] of Object.entries(modules)) {
-  const name = file.replace(/^.*\//, '').replace(/_dmc\.png$/, '');
-  PET_SPRITES[name] = url;
-}
-
+export const PET_SPRITES: Record<string, string> = {
+  ...STAGE_SPRITES,
+  triceramon: triceramonGif,
+};
 export const PET_NAMES = Object.keys(PET_SPRITES).sort();
 
-export const DEFAULT_PET = 'agumon';
+// Pet padrão do overlay antes de sincronizar (ou se a sincronização falhar).
+export const DEFAULT_PET = 'triceramon';
 
 export function petSprite(name: string): string {
   return PET_SPRITES[name] ?? PET_SPRITES[DEFAULT_PET];

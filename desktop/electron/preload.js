@@ -1,8 +1,21 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('digiDesktop', {
-  /** Liga/desliga o click-through: true = mouse interage com o overlay. */
+  /** Liga/desliga o click-through do overlay: true = mouse interage com o pet. */
   setInteractive: (on) => ipcRenderer.send('set-interactive', !!on),
+  /** Abre a janela de menu (estilo Windows 98). */
+  openMenu: () => ipcRenderer.send('open-menu'),
+  /** Minimiza só a janela do menu (não fecha o app). */
+  minimizeMenu: () => ipcRenderer.send('menu-minimize'),
   openFullApp: () => ipcRenderer.send('open-full-app'),
-  quit: () => ipcRenderer.send('overlay-quit'),
+  /** Fecha o app inteiro (overlay + menu + bandeja). */
+  quit: () => ipcRenderer.send('app-quit'),
+  /** Chamado quando uma atualização já foi baixada e será instalada ao sair. */
+  onUpdateReady: (cb) => ipcRenderer.on('update-ready', () => cb()),
+  /** Avisa que o estado (localStorage) mudou, pra outras janelas recarregarem. */
+  notifyStateChanged: () => ipcRenderer.send('state-changed'),
+  onStateChanged: (cb) => ipcRenderer.on('state-changed', () => cb()),
+  /** Menu disparou uma ação (carinho/comida/banho/tarefa) — overlay mostra a animação. */
+  sendEffect: (emoji, phrase) => ipcRenderer.send('pet-effect', emoji, phrase),
+  onEffect: (cb) => ipcRenderer.on('pet-effect', (_e, emoji, phrase) => cb(emoji, phrase)),
 });
