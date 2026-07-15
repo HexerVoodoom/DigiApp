@@ -22,7 +22,7 @@ export async function onRequestPost({ request, env }) {
     });
   }
 
-  const { endpoint, keys, digimonName, language } = body;
+  const { endpoint, keys, digimonName, language, poop } = body;
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), {
       status: 400,
@@ -31,9 +31,19 @@ export async function onRequestPost({ request, env }) {
   }
 
   const kvKey = `push:${await hashEndpoint(endpoint)}`;
+  // Merge with any existing record so a poop-only resync (or the
+  // enable/disable toggle) never clobbers fields the caller didn't send.
+  const existingRaw = await env.PUSH_SUBSCRIPTIONS.get(kvKey);
+  const existing = existingRaw ? JSON.parse(existingRaw) : {};
   await env.PUSH_SUBSCRIPTIONS.put(
     kvKey,
-    JSON.stringify({ endpoint, keys, digimonName: digimonName || 'DigiMon', language: language || 'pt-BR' }),
+    JSON.stringify({
+      endpoint,
+      keys,
+      digimonName: digimonName ?? existing.digimonName ?? 'DigiMon',
+      language: language ?? existing.language ?? 'pt-BR',
+      poop: poop ?? existing.poop,
+    }),
     { expirationTtl: 60 * 60 * 24 * 365 },
   );
 

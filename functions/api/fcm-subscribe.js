@@ -28,7 +28,7 @@ export async function onRequestPost({ request, env }) {
     });
   }
 
-  const { token, digimonName, language } = body;
+  const { token, digimonName, language, poop } = body;
   if (!token) {
     return new Response(JSON.stringify({ error: 'Missing token' }), {
       status: 400,
@@ -37,9 +37,18 @@ export async function onRequestPost({ request, env }) {
   }
 
   const kvKey = `fcm:${await hashToken(token)}`;
+  // Merge with any existing record so a poop-only resync never clobbers
+  // fields the caller didn't send (mirrors functions/api/subscribe.js).
+  const existingRaw = await env.PUSH_SUBSCRIPTIONS.get(kvKey);
+  const existing = existingRaw ? JSON.parse(existingRaw) : {};
   await env.PUSH_SUBSCRIPTIONS.put(
     kvKey,
-    JSON.stringify({ token, digimonName: digimonName || 'DigiMon', language: language || 'pt-BR' }),
+    JSON.stringify({
+      token,
+      digimonName: digimonName ?? existing.digimonName ?? 'DigiMon',
+      language: language ?? existing.language ?? 'pt-BR',
+      poop: poop ?? existing.poop,
+    }),
     { expirationTtl: 60 * 60 * 24 * 365 },
   );
 

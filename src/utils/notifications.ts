@@ -127,9 +127,22 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+/** Server-side mirror of the poop timing a subscription needs to schedule
+ * push warnings — kept in sync so workers/push-scheduler.js can compute
+ * "poop just appeared" / "~30min before heart drain" without the app open. */
+export interface PoopPushState {
+  scheduled: number[];
+  shown: number[];
+  completed: number[];
+  penaltyClockAt: number;
+  sleeping: boolean;
+  stage: string;
+}
+
 export const subscribeToPush = async (
   digimonName: string,
-  language: 'pt-BR' | 'en-US'
+  language: 'pt-BR' | 'en-US',
+  poop?: PoopPushState,
 ): Promise<boolean> => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
   if (Notification.permission !== 'granted') return false;
@@ -149,6 +162,7 @@ export const subscribeToPush = async (
       ...sub.toJSON(),
       digimonName,
       language,
+      ...(poop ? { poop } : {}),
     };
 
     const res = await fetch('/api/subscribe', {
@@ -161,6 +175,45 @@ export const subscribeToPush = async (
   } catch (err) {
     console.error('Push subscribe error:', err);
     return false;
+  }
+};
+
+// Resync just the poop timing on an existing Web Push subscription — cheap
+// enough to call whenever poop-related game state changes, without
+// re-subscribing pushManager or re-sending digimonName/language (the server
+// merges, see functions/api/subscribe.js).
+export const syncPushPoopState = async (poop: PoopPushState): Promise<void> => {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+
+    await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sub.toJSON(), poop }),
+    });
+  } catch (err) {
+    console.error('Push poop sync error:', err);
+  }
+};
+
+// Same idea as syncPushPoopState, for the native Android FCM channel.
+export const syncFcmPoopState = async (poop: PoopPushState): Promise<void> => {
+  const token = localStorage.getItem(STORAGE_KEYS.FCM_TOKEN);
+  if (!token) return;
+
+  try {
+    await fetch('/api/fcm-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, poop }),
+    });
+  } catch (err) {
+    console.error('FCM poop sync error:', err);
   }
 };
 

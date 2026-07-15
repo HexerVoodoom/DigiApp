@@ -1,5 +1,7 @@
 // Cloudflare Worker — Scheduled push notifications for DigiApp
 // Cron triggers: 10h, 16h, 21h (task reminders) + 22h (goodnight) — BRT (UTC-3)
+// — plus a */15min cron dedicated to the 💩 poop system (see POOP_CRON below),
+// which needs finer granularity since a user's poop tick can land at any minute.
 //
 // Sends to BOTH channels stored in the same KV namespace: `push:` keys via Web
 // Push (browsers/PWA installs) and `fcm:` keys via Firebase Cloud Messaging
@@ -18,6 +20,120 @@ import { getFcmAccessToken, sendFcmPush } from './fcm.js';
 
 const VAPID_PUBLIC_KEY = 'BK2MsJZtN6ancQBtKZYLFxe_avXfIPqRs28szlgRXJGfQcJlrd4wtBhzMr6t2zPvz7HUeJv-jpleDaNfmRZIlXY';
 const CONTACT = 'mailto:contact@digiapp.app';
+
+const POOP_CRON = '*/15 * * * *';
+const SIX_HOURS = 6 * 3600000;
+
+function getPoopNotification(kind, digimonName, language) {
+  const ispt = language === 'pt-BR';
+  if (kind === 'warn') {
+    return {
+      title: ispt ? '🚽 Seu Digimon está na sujeira!' : '🚽 Your Digimon is in a mess!',
+      body: ispt
+        ? 'Cocô não limpo tira 1 coração em breve. Dê um banho!'
+        : 'Uncleaned poop will drain 1 heart soon. Give it a bath!',
+      tag: 'poop-drain-warning',
+    };
+  }
+  return {
+    title: ispt ? '🚽 Hora de limpar!' : '🚽 Bathroom time!',
+    body: ispt
+      ? 'Seu Digimon fez cocô! Dê um banho para limpar. 🚿'
+      : 'Your Digimon pooped! Give it a shower to clean up. 🚿',
+    tag: 'poop-event',
+  };
+}
+
+// Mirrors src/hooks/useCareSystem.ts (poop appearance) and the drain-warning
+// effect in src/App.tsx — decides if `sub.poop` (synced by the client, see
+// src/utils/notifications.ts) is due for a push right now, without ever
+// mutating gameplay state itself (that stays client-authoritative).
+function computeDuePoopNotification(poop, now) {
+  if (!poop) return null;
+  if (poop.sleeping) return null;
+  if (poop.stage === 'digiegg' || poop.stage === 'baby-i') return null;
+
+  const scheduled = poop.scheduled || [];
+  const shown = poop.shown || [];
+  const completed = poop.completed || [];
+
+  let appearIdx = null;
+  for (let i = 0; i < scheduled.length; i++) {
+    if (shown.includes(i)) continue;
+    if (now >= scheduled[i]) {
+      appearIdx = i;
+      break;
+    }
+  }
+  if (appearIdx !== null && poop.lastAppearNotifiedIdx !== appearIdx) {
+    return { kind: 'appear', updates: { lastAppearNotifiedIdx: appearIdx } };
+  }
+
+  const hasUnclean = shown.some(i => !completed.includes(i));
+  if (hasUnclean && poop.penaltyClockAt) {
+    const clock = poop.penaltyClockAt;
+    const periodStart = clock + Math.floor((now - clock) / SIX_HOURS) * SIX_HOURS;
+    const msToNextTick = periodStart + SIX_HOURS - now;
+    if (msToNextTick > 0 && msToNextTick <= 30 * 60000 && poop.lastDrainWarnPeriodStart !== periodStart) {
+      return { kind: 'warn', updates: { lastDrainWarnPeriodStart: periodStart } };
+    }
+  }
+
+  return null;
+}
+
+async function handlePoopCron(env, drainCounts) {
+  const now = Date.now();
+
+  let vapidJWK = null;
+  try { vapidJWK = JSON.parse(env.VAPID_JWK); } catch { /* Web Push disabled */ }
+
+  let serviceAccount = null;
+  let fcmAccessToken = null;
+  try {
+    serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT);
+    fcmAccessToken = await getFcmAccessToken(serviceAccount);
+  } catch { /* FCM disabled */ }
+
+  const sendAndMark = async (sub, name, due, channel) => {
+    const notif = getPoopNotification(due.kind, sub.digimonName, sub.language);
+    const result = channel === 'push'
+      ? await sendWebPush({ endpoint: sub.endpoint, keys: sub.keys }, notif, vapidJWK, VAPID_PUBLIC_KEY, CONTACT)
+      : await sendFcmPush(sub.token, notif, serviceAccount.project_id, fcmAccessToken);
+
+    if (channel === 'push' && (result.status === 410 || result.status === 404)) {
+      await env.PUSH_SUBSCRIPTIONS.delete(name);
+      return 'removed';
+    }
+    if (channel === 'fcm' && !result.ok && result.error === 'UNREGISTERED') {
+      await env.PUSH_SUBSCRIPTIONS.delete(name);
+      return 'removed';
+    }
+    if (!result.ok) return 'failed';
+
+    await env.PUSH_SUBSCRIPTIONS.put(name, JSON.stringify({
+      ...sub,
+      poop: { ...sub.poop, ...due.updates },
+    }));
+    return 'sent';
+  };
+
+  if (vapidJWK) {
+    await drainPrefix(env, 'push:', async (sub, name) => {
+      const due = computeDuePoopNotification(sub.poop, now);
+      if (!due) return 'skipped';
+      return sendAndMark(sub, name, due, 'push');
+    }, drainCounts.webPush);
+  }
+
+  if (serviceAccount && fcmAccessToken) {
+    await drainPrefix(env, 'fcm:', async (sub, name) => {
+      const due = computeDuePoopNotification(sub.poop, now);
+      if (!due) return 'skipped';
+      return sendAndMark(sub, name, due, 'fcm');
+    }, drainCounts.fcm);
+  }
+}
 
 function getNotification(brtHour, digimonName, language) {
   const ispt = language === 'pt-BR';
@@ -84,6 +200,19 @@ async function drainPrefix(env, prefix, handle, counts) {
 
 export default {
   async scheduled(event, env) {
+    if (event.cron === POOP_CRON) {
+      const counts = {
+        webPush: { sent: 0, failed: 0, removed: 0, skipped: 0 },
+        fcm: { sent: 0, failed: 0, removed: 0, skipped: 0 },
+      };
+      await handlePoopCron(env, counts);
+      console.log(
+        `[poop cron] done — webpush: sent ${counts.webPush.sent}, failed ${counts.webPush.failed}, removed ${counts.webPush.removed} · ` +
+        `fcm: sent ${counts.fcm.sent}, failed ${counts.fcm.failed}, removed ${counts.fcm.removed}`,
+      );
+      return;
+    }
+
     const date = new Date(event.scheduledTime);
     const brtHour = (date.getUTCHours() - 3 + 24) % 24;
 

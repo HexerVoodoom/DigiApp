@@ -5,6 +5,7 @@ import { DigiAlarm } from '../plugins/DigiAlarmPlugin';
 import {
   checkAndShowNotifications, showNotification, subscribeToPush, syncActivityAlarms, syncTaskAlarms,
   unsubscribeFromPush, registerForPushNotifications, unregisterFromPushNotifications,
+  syncPushPoopState, syncFcmPoopState, type PoopPushState,
 } from '../utils/notifications';
 
 interface Activity {
@@ -32,6 +33,7 @@ interface NotificationManagerProps {
   maxHealthPoints: number;
   completedSteps: number;
   totalRequired: number;
+  poop: PoopPushState;
 }
 
 export function NotificationManager({
@@ -45,6 +47,7 @@ export function NotificationManager({
   maxHealthPoints,
   completedSteps,
   totalRequired,
+  poop,
 }: NotificationManagerProps) {
   const lastEveningWarnDate = useRef<string>('');
   const lastNudge10Date = useRef<string>('');
@@ -64,7 +67,7 @@ export function NotificationManager({
           toast(title, { description: body });
         });
       } else {
-        subscribeToPush(digimonName, language);
+        subscribeToPush(digimonName, language, poop);
       }
     } else {
       if (isNativeAndroid) {
@@ -73,7 +76,26 @@ export function NotificationManager({
         unsubscribeFromPush();
       }
     }
+    // poop is intentionally excluded — the dedicated resync effect below
+    // handles it so the pushManager subscription isn't re-created every time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, digimonName, language]);
+
+  // Resync poop timing on the server so workers/push-scheduler.js can warn
+  // the user (~30min before a heart-drain tick, and when poop appears) even
+  // when the app is closed — see CLAUDE.md's 💩 Cocô rule. Keyed off a
+  // serialized snapshot (not the array refs, which are new every render).
+  const poopKey = JSON.stringify(poop);
+  useEffect(() => {
+    if (!enabled) return;
+    const isNativeAndroid = Capacitor.getPlatform() === 'android';
+    if (isNativeAndroid) {
+      syncFcmPoopState(poop);
+    } else {
+      syncPushPoopState(poop);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, poopKey]);
 
   // Sync alarms when activities or tasks change
   useEffect(() => {

@@ -146,4 +146,4 @@ export function getSpriteForStage(stage: string): string {
 }
 
 /** Sprites drawn facing LEFT by default — flip them when they should face right. */
-export const LEFT_FACING_STAGES = ['pichimon', 'chicomon', 'yukimibotamon', 'pukamon', 'tapirmon'];
+export const LEFT_FACING_STAGES = ['pichimon', 'chicomon', 'yukimibotamon', 'pukamon', 'tapirmon', 'monochromon'];

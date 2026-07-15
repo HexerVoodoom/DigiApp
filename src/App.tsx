@@ -1848,6 +1848,16 @@ export default function App() {
         maxHealthPoints={gameState.maxHealthPoints}
         completedSteps={dailyDone}
         totalRequired={FORM_REQUIREMENTS[getStageLevel(gameState.evolutionStage)].required}
+        poop={{
+          scheduled: gameState.poopEventsScheduled || [],
+          shown: gameState.poopEventsShown || [],
+          completed: gameState.poopEventsCompleted || [],
+          penaltyClockAt: gameState.poopPenaltyClockAt ?? 0,
+          sleeping: isSleeping,
+          // Server-side gate only knows digiegg/baby-i by *level*, not by raw
+          // form name (e.g. 'pichimon') — send the resolved level.
+          stage: getStageLevel(gameState.evolutionStage),
+        }}
       />
       {showDailyReport && gameState.lastDayReport && (
         <DailyReportModal

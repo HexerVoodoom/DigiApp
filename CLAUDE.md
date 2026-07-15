@@ -84,6 +84,23 @@ Estágios/HP máx: digiegg,baby-i=1 · baby-ii=2 · rookie/champion/ultimate=3 �
   Doze/otimização de bateria em ROMs de fabricante (MIUI, EMUI etc.) do que uma
   subscription de Web Push crua, e dá visibilidade de entrega pelo Firebase
   Console. Web Push continua ativo (cobre PWA/desktop); os dois convivem.
+  **Cocô via push real:** o aparecimento aleatório do cocô e o aviso ~30min
+  antes do tick de dreno de coração antes rodavam SÓ como `setInterval`
+  client-side (`useCareSystem.ts` + `App.tsx`) — não disparavam com o app
+  fechado. Agora o cliente sincroniza `poopEventsScheduled/Shown/Completed`,
+  `poopPenaltyClockAt`, `isSleeping` e o nível do estágio pro registro na KV
+  (campo `poop`, via `syncPushPoopState`/`syncFcmPoopState` em
+  `notifications.ts`, chamado sempre que esse estado muda — ver efeito
+  dedicado em `NotificationManager.tsx`; `/api/subscribe.js` e
+  `/api/fcm-subscribe.js` fazem *merge* no PUT em vez de sobrescrever, pra um
+  resync só de cocô não apagar `digimonName`/`language`). Um cron adicional
+  **a cada 15min** (`*/15 * * * *`, distinto via `event.cron` em
+  `push-scheduler.js`) computa server-side se algum tick está devido
+  (`computeDuePoopNotification`, espelha a lógica client) e manda push real
+  pelos dois canais; marca `lastAppearNotifiedIdx`/`lastDrainWarnPeriodStart`
+  na própria KV pra não duplicar envio. **Lembrar de rodar `wrangler deploy`
+  dentro de `workers/` depois de mudar isso** (cron trigger novo só entra em
+  vigor com deploy manual, não builda sozinho no push do main).
 - Widgets Android: `android/.../widget/WidgetRenderer.kt` + layouts. Dados via
   `DigiWidgetPlugin` (SharedPreferences). Testes: `npx vitest run` cobre lógica de reset.
 
