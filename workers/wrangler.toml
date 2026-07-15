@@ -15,7 +15,7 @@ binding = "PUSH_SUBSCRIPTIONS"
 id = "12dd88d3282140e786a5b2c5b5b940cf"
 
 [vars]
-VAPID_PUBLIC_KEY = "BK2MsJZtN6ancQBtKZYLFxe_avXfIPqRs28szlgRXJGfQcJlrd4wtBhzMr6t2zPvz7HUeJv-jpleDaNfmRZIlXY"
+VAPID_PUBLIC_KEY = "BOwIWjJK1kQkZTs6fhuIOYgBzYaDXVyRGIKY4Cu-lwn8kvpa-Whxaegn94MUga4bma85GLlUBLr3pNieFvEqUM4"
 
 # VAPID_JWK must be set as a secret:
 # wrangler secret put VAPID_JWK

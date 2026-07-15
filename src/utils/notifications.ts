@@ -151,10 +151,24 @@ export const subscribeToPush = async (
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
 
+    // A subscription created under a previous VAPID key can't receive pushes
+    // signed with the current one — drop it and resubscribe fresh.
+    const serverKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+    if (sub) {
+      const existingKey = sub.options?.applicationServerKey;
+      if (existingKey) {
+        const a = new Uint8Array(existingKey);
+        if (a.length !== serverKey.length || a.some((b, i) => b !== serverKey[i])) {
+          await sub.unsubscribe();
+          sub = null;
+        }
+      }
+    }
+
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: serverKey,
       });
     }
 

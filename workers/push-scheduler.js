@@ -18,7 +18,7 @@
 import { sendWebPush } from './webpush.js';
 import { getFcmAccessToken, sendFcmPush } from './fcm.js';
 
-const VAPID_PUBLIC_KEY = 'BK2MsJZtN6ancQBtKZYLFxe_avXfIPqRs28szlgRXJGfQcJlrd4wtBhzMr6t2zPvz7HUeJv-jpleDaNfmRZIlXY';
+const VAPID_PUBLIC_KEY = 'BOwIWjJK1kQkZTs6fhuIOYgBzYaDXVyRGIKY4Cu-lwn8kvpa-Whxaegn94MUga4bma85GLlUBLr3pNieFvEqUM4';
 const CONTACT = 'mailto:contact@digiapp.app';
 
 const POOP_CRON = '*/15 * * * *';
