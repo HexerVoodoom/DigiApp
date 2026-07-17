@@ -46,7 +46,8 @@
     "publish": {
       "provider": "github",
       "owner": "HexerVoodoom",
-      "repo": "DigiApp"
+      "repo": "DigiApp",
+      "releaseType": "release"
     }
   }
 }
