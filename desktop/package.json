@@ -2,7 +2,7 @@
   "name": "digiapp-desktop",
   "productName": "DigiApp Desktop",
   "description": "Pet virtual do DigiApp como overlay na barra de tarefas do Windows",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
