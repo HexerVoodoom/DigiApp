@@ -11,6 +11,7 @@ const { autoUpdater } = require('electron-updater');
 // Altura da faixa: pet (~96px) + espaço pro balão de fala acima dele. O menu
 // agora é uma janela própria (ver createMenuWindow), não precisa mais caber aqui.
 const STRIP_HEIGHT = 180;
+const PET_SIZE = 96; // mesma constante do renderer (main.ts)
 const FULL_APP_URL = 'https://digiapp-a5e.pages.dev';
 const MENU_SIZE = { width: 340, height: 480 };
 
@@ -108,8 +109,13 @@ function createOverlay() {
   overlayWin.on('closed', () => { overlayWin = null; });
 }
 
-function createMenuWindow() {
+/**
+ * @param {number|undefined} petCenterX Centro do pet em coordenadas do overlay
+ *   (0..workArea.width), mandado pelo renderer no clique. Undefined = centraliza.
+ */
+function createMenuWindow(petCenterX) {
   if (menuWin) {
+    positionMenuNearPet(petCenterX);
     menuWin.show();
     menuWin.focus();
     return;
@@ -121,6 +127,11 @@ function createMenuWindow() {
     resizable: false,
     show: false,
     skipTaskbar: false,
+    // Transparente pra CSS desenhar cantos arredondados + sombra própria
+    // (janela quadrada por baixo ficaria visível atrás do card arredondado).
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
     icon: path.join(__dirname, 'assets', 'icon.png'),
     title: 'DigiApp',
     webPreferences: {
@@ -130,18 +141,25 @@ function createMenuWindow() {
     },
   });
 
-  // Abre perto do canto inferior direito da tela principal (acima da taskbar).
-  const wa = screen.getPrimaryDisplay().workArea;
-  menuWin.setBounds({
-    x: wa.x + wa.width - MENU_SIZE.width - 24,
-    y: wa.y + wa.height - MENU_SIZE.height - 24,
-    width: MENU_SIZE.width,
-    height: MENU_SIZE.height,
-  });
+  positionMenuNearPet(petCenterX);
 
   menuWin.loadFile(path.join(__dirname, '..', 'dist-renderer', 'menu.html'));
   menuWin.once('ready-to-show', () => menuWin.show());
   menuWin.on('closed', () => { menuWin = null; });
+}
+
+/** Abre a janela colada no pet: horizontalmente centrada nele, encostada
+ * logo acima do sprite (em vez do canto fixo da tela). */
+function positionMenuNearPet(petCenterX) {
+  if (!menuWin) return;
+  const wa = screen.getPrimaryDisplay().workArea;
+  const centerX = wa.x + (petCenterX ?? wa.width / 2);
+  const x = Math.round(
+    Math.min(Math.max(centerX - MENU_SIZE.width / 2, wa.x + 8), wa.x + wa.width - MENU_SIZE.width - 8),
+  );
+  const petTop = wa.y + wa.height - PET_SIZE;
+  const y = Math.round(Math.max(wa.y + 8, petTop - MENU_SIZE.height - 8));
+  menuWin.setBounds({ x, y, width: MENU_SIZE.width, height: MENU_SIZE.height });
 }
 
 function createTray() {
@@ -190,7 +208,7 @@ ipcMain.on('set-interactive', (_e, on) => {
   overlayWin.setIgnoreMouseEvents(!on, { forward: true });
 });
 
-ipcMain.on('open-menu', createMenuWindow);
+ipcMain.on('open-menu', (_event, petCenterX) => createMenuWindow(petCenterX));
 ipcMain.on('open-full-app', openFullApp);
 // Fecha o APP inteiro (overlay + menu + tray) — não só a janela do menu.
 ipcMain.on('app-quit', () => app.quit());

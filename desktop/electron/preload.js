@@ -3,8 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('digiDesktop', {
   /** Liga/desliga o click-through do overlay: true = mouse interage com o pet. */
   setInteractive: (on) => ipcRenderer.send('set-interactive', !!on),
-  /** Abre a janela de menu (estilo Windows 98). */
-  openMenu: () => ipcRenderer.send('open-menu'),
+  /** Abre a janela de menu perto do pet (centerX = centro do pet na tela, em px do overlay). */
+  openMenu: (centerX) => ipcRenderer.send('open-menu', centerX),
   /** Minimiza só a janela do menu (não fecha o app). */
   minimizeMenu: () => ipcRenderer.send('menu-minimize'),
   openFullApp: () => ipcRenderer.send('open-full-app'),

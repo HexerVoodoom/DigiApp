@@ -35,8 +35,17 @@ function heartsLabel(): string {
 
 function button(label: string, onClick: () => void, extraClass = ''): HTMLButtonElement {
   const b = document.createElement('button');
-  b.className = `win98-btn ${extraClass}`.trim();
+  b.className = `list-btn ${extraClass}`.trim();
   b.innerHTML = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+/** Botão redondo de ícone, usado só pelas ações de cuidado (care-row). */
+function careButton(icon: string, label: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.className = 'care-btn';
+  b.innerHTML = `<span class="care-icon">${icon}</span><span class="care-label">${label}</span>`;
   b.addEventListener('click', onClick);
   return b;
 }
@@ -71,28 +80,30 @@ function renderMain() {
   content.appendChild(header);
 
   const img = document.createElement('img');
+  img.className = 'pet-portrait';
   img.src = petSprite(state.pet);
   img.alt = petLabel(state.pet);
-  img.style.cssText = 'width:64px;height:64px;image-rendering:pixelated;display:block;margin:0 auto;';
   content.appendChild(img);
 
-  if (status) {
-    const s = document.createElement('div');
-    s.className = 'field-hint ok';
-    s.style.textAlign = 'center';
-    s.textContent = status;
-    content.appendChild(s);
-  }
+  const statusLine = document.createElement('div');
+  statusLine.className = 'status-line';
+  statusLine.textContent = status;
+  content.appendChild(statusLine);
+
+  // Ações de cuidado (carinho/comida/banho/sono) ficam separadas do resto
+  // numa fileira de ícones própria — tarefas/config são outra categoria.
+  const careRow = document.createElement('div');
+  careRow.className = 'care-row';
+  careRow.append(
+    careButton('🫶', t('Carinho', 'Pet'), doPet),
+    careButton('🍎', t('Comida', 'Feed'), doFeed),
+    careButton('🚿', t('Banho', 'Bath'), doShower),
+    careButton(state.sleeping ? '☀️' : '💤', state.sleeping ? t('Acordar', 'Wake') : t('Dormir', 'Sleep'), doSleepToggle),
+  );
+  content.appendChild(careRow);
 
   const pending = state.tasks.filter((task) => !task.completed).length;
   content.append(
-    button(`🫶 ${t('Fazer carinho', 'Pet')}`, doPet),
-    button(`🍎 ${t('Alimentar', 'Feed')}`, doFeed),
-    button(`🚿 ${t('Dar banho', 'Bath')}`, doShower),
-    button(
-      state.sleeping ? `☀️ ${t('Acordar', 'Wake up')}` : `💤 ${t('Colocar pra dormir', 'Sleep')}`,
-      doSleepToggle,
-    ),
     button(`✅ ${t('Tarefas', 'Tasks')}${pending ? ` <span class="badge">${pending}</span>` : ''}`, () => { panel = 'tasks'; render(); }),
     button(`➕ ${t('Nova tarefa', 'New task')}`, () => { panel = 'newTask'; render(); }),
   );
@@ -144,7 +155,7 @@ function renderNewTask() {
   input.placeholder = t('O que precisa fazer?', 'What needs doing?');
   const submit = document.createElement('button');
   submit.type = 'submit';
-  submit.className = 'win98-btn';
+  submit.className = 'list-btn';
   submit.textContent = t('Criar', 'Create');
   form.append(input, submit);
   form.addEventListener('submit', (e) => {

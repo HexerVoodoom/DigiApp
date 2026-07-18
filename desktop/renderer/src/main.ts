@@ -106,7 +106,7 @@ function burst(emoji: string, count = 6) {
 }
 
 // ------------------------------------------------- interação / click-through
-pet.addEventListener('click', () => window.digiDesktop?.openMenu());
+pet.addEventListener('click', () => window.digiDesktop?.openMenu(x + PET_SIZE / 2));
 
 // A janela é click-through por padrão; quando o mouse passa sobre o pet
 // ([data-hit]) avisamos o main process para aceitar cliques.

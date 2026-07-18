@@ -6,14 +6,18 @@ de todas as janelas**, andando de um lado para o outro e soltando frases de vez
 em quando. A janela é *click-through* — cliques atravessam para o que estiver
 embaixo — **exceto** quando o mouse está sobre o pet.
 
-Clicar no pet abre uma **janela separada, estilo Windows 98** (`menu.html`),
-com uma barra de título de verdade (⚙ configurações, `_` minimizar, `✕`
-fechar o app):
+Clicar no pet abre uma **janela separada, ao lado dele**, numa releitura
+moderna e minimalista do Windows 98 (`menu.html` + `win98.css`): cartão
+flutuante com cantos arredondados e sombra, título flat com 3 botões (⚙
+configurações, `_` minimizar, `✕` fechar o app):
 
 - 🫶 **Fazer carinho** (chuva de corações; cura +0.5 ❤️, máx. 1×/dia — mesma regra do mobile)
 - 🍎 **Alimentar** (gasta 1 comida do bolso; +1 ⚡; máx. 5/hora — mesma regra do mobile)
 - 🚿 **Dar banho**
 - 💤 **Colocar pra dormir / Acordar**
+As 4 ações de cuidado acima ficam **numa fileira de ícones própria**,
+separada do resto — tarefas e configurações são outra categoria:
+
 - ✅ **Tarefas** — marcar como feita (**dá +1 comida**) / desmarcar / excluir
 - ➕ **Nova tarefa**
 - ⚙️ **Configurações** — e-mail de sincronização (leitura do save real), trocar
@@ -92,9 +96,13 @@ Pontos técnicos:
   atravessável; o renderer detecta *hover* sobre `[data-hit]` (o pet) e liga a
   interatividade via IPC. O `forward: true` é um recurso do Windows — por isso
   o alvo v1 é só Windows, como combinado.
-- A janela de menu usa `frame: false` + chrome desenhado em CSS (`win98.css`);
-  arrasta pela barra de título via `-webkit-app-region: drag` (com `no-drag`
-  nos botões).
+- A janela de menu usa `frame: false` + `transparent: true` — o cartão
+  arredondado com sombra é desenhado em CSS (`win98.css`) sobre a janela
+  transparente (por isso a janela Electron é maior que o cartão visível: 16px
+  de sobra em volta pra sombra não ficar cortada). Arrasta pela barra de
+  título via `-webkit-app-region: drag` (com `no-drag` nos botões). Abre
+  horizontalmente centrada no pet (posição mandada pelo overlay no clique via
+  IPC) e encostada logo acima do sprite, não mais num canto fixo da tela.
 - Sprites olham para a esquerda por padrão; andar para a direita = `scaleX(-1)`.
 - `sprites.ts` importa `STAGE_SPRITES` de `../../../src/utils/sprites.ts`
   (todas as formas do jogo, não só um subconjunto) — precisa do alias

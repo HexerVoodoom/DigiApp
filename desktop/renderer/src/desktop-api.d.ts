@@ -2,7 +2,7 @@
 // ex.: teste com Playwright — por isso todo uso é opcional).
 interface DigiDesktopApi {
   setInteractive(on: boolean): void;
-  openMenu(): void;
+  openMenu(centerX?: number): void;
   minimizeMenu(): void;
   openFullApp(): void;
   quit(): void;
