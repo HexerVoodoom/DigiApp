@@ -60,6 +60,12 @@ novo. O updater só considera "nova" uma versão cujo número seja maior que o
 instalado — **bump o campo `version` em `desktop/package.json`** antes de um
 push que deva chegar como atualização aos usuários.
 
+**Steam**: `npm run dist:steam` gera um build alternativo (pasta
+desempacotada, sem publicar no GitHub) com o auto-update via GitHub
+desligado — nessa variante quem cuida de distribuir/atualizar é o SteamPipe.
+Ver `desktop/STEAM.md` para o passo a passo completo de conta Steamworks,
+upload do build e assets da loja.
+
 ## Arquitetura
 
 ```

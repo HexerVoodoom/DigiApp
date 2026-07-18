@@ -11,7 +11,8 @@
     "dev": "vite build && electron .",
     "start": "electron .",
     "dist": "vite build && electron-builder --win",
-    "dist:publish": "vite build && electron-builder --win --publish always"
+    "dist:publish": "vite build && electron-builder --win --publish always",
+    "dist:steam": "vite build && electron-builder --win --dir --publish never -c.extraMetadata.steamBuild=true"
   },
   "dependencies": {
     "electron-updater": "^6.3.9"

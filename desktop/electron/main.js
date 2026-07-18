@@ -8,6 +8,13 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage } = require
 const path = require('node:path');
 const { autoUpdater } = require('electron-updater');
 
+// Builds de Steam (ver `npm run dist:steam` + desktop/STEAM.md) marcam
+// package.json com steamBuild:true via extraMetadata do electron-builder.
+// Nessa variante o auto-update via GitHub Releases fica DESLIGADO — a
+// atualização passa a ser responsabilidade do SteamPipe (senão os dois
+// mecanismos brigariam pelo mesmo binário).
+const isSteamBuild = require('../package.json').steamBuild === true;
+
 // Altura da faixa: pet (~96px) + espaço pro balão de fala acima dele. O menu
 // agora é uma janela própria (ver createMenuWindow), não precisa mais caber aqui.
 const STRIP_HEIGHT = 180;
@@ -39,7 +46,7 @@ if (!gotLock) {
     screen.on('display-added', positionOverlay);
     screen.on('display-removed', positionOverlay);
 
-    if (app.isPackaged) {
+    if (app.isPackaged && !isSteamBuild) {
       checkForUpdates();
       setInterval(checkForUpdates, 4 * 60 * 60 * 1000); // a cada 4h
     }
@@ -53,7 +60,8 @@ function checkForUpdates() {
 }
 
 // Baixa sozinho e instala na próxima vez que o app fechar — nunca precisa
-// baixar/rodar o instalador de novo manualmente a partir do GitHub.
+// baixar/rodar o instalador de novo manualmente a partir do GitHub. (Só na
+// build normal — na build de Steam isso nunca é chamado, ver isSteamBuild.)
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.on('update-downloaded', () => {

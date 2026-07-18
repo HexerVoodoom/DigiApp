@@ -119,6 +119,12 @@ Estágios/HP máx: digiegg,baby-i=1 · baby-ii=2 · rookie/champion/ultimate=3 �
   o release a cada push em `desktop/**`. **Bump a versão em
   `desktop/package.json` antes de mudanças que devam disparar update** — o
   updater só baixa se a versão do release for maior que a instalada.
+  **Steam**: `npm run dist:steam` gera build alternativo (pasta
+  desempacotada, sem Steamworks API, sem publicar no GitHub) com
+  `steamBuild:true` injetado no `package.json` empacotado — `main.js` usa
+  essa flag pra NUNCA chamar `autoUpdater` nessa variante (o SteamPipe cuida
+  da distribuição). Guia completo (conta Steamworks, App ID, SteamPipe,
+  assets da loja) em `desktop/STEAM.md`.
 
 ## Footguns (aprendidos a dor — não repita)
 
