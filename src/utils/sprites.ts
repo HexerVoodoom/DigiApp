@@ -145,5 +145,20 @@ export function getSpriteForStage(stage: string): string {
   return STAGE_SPRITES[stage.toLowerCase()] ?? digiEggSprite;
 }
 
-/** Sprites drawn facing LEFT by default — flip them when they should face right. */
-export const LEFT_FACING_STAGES = ['pichimon', 'chicomon', 'yukimibotamon', 'pukamon', 'tapirmon', 'monochromon'];
+/** Sprites drawn facing LEFT by default — flip them when they should face right.
+ * Audited visually (2026-07): frontal sprites stay out (flip is harmless there);
+ * only clear left-profiles are listed. Right-facing profiles (veemon, exveemon,
+ * flamedramon, agumon, patamon, birdramon, airdramon…) must NOT be added. */
+export const LEFT_FACING_STAGES = [
+  // Tapirmon line — the whole line's art faces left
+  'pichimon', 'pukamon', 'tapirmon', 'monochromon', 'tuskmon', 'triceramon',
+  'gigadramon', 'ultimatebrachiomon', 'gaioumon', 'titamon', 'gaioumon-itto',
+  // Veemon line — baby/rookie/champions face right, later forms face left
+  'chicomon', 'veedramon', 'aeroveedramon', 'paildramon', 'imperialdramon',
+  'ulforceveedramon', 'raidramon', 'raidramon-armor',
+  // Salamon line
+  'yukimibotamon', 'nyaromon', 'nefertimon', 'holydramon', 'mastemon',
+  // Item/drop digivolutions (DMC dots)
+  'greymon', 'garurumon', 'gabumon', 'piyomon', 'seadramon', 'numemon',
+  'megadramon', 'kabuterimon',
+];
