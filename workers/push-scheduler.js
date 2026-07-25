@@ -48,7 +48,7 @@ function getPoopNotification(kind, digimonName, language) {
 // effect in src/App.tsx — decides if `sub.poop` (synced by the client, see
 // src/utils/notifications.ts) is due for a push right now, without ever
 // mutating gameplay state itself (that stays client-authoritative).
-function computeDuePoopNotification(poop, now) {
+export function computeDuePoopNotification(poop, now) {
   if (!poop) return null;
   if (poop.sleeping) return null;
   if (poop.stage === 'digiegg' || poop.stage === 'baby-i') return null;
@@ -57,16 +57,19 @@ function computeDuePoopNotification(poop, now) {
   const shown = poop.shown || [];
   const completed = poop.completed || [];
 
-  let appearIdx = null;
+  let appearAt = null;
   for (let i = 0; i < scheduled.length; i++) {
     if (shown.includes(i)) continue;
     if (now >= scheduled[i]) {
-      appearIdx = i;
+      appearAt = scheduled[i];
       break;
     }
   }
-  if (appearIdx !== null && poop.lastAppearNotifiedIdx !== appearIdx) {
-    return { kind: 'appear', updates: { lastAppearNotifiedIdx: appearIdx } };
+  // Dedupe by the scheduled TIMESTAMP, not the array index — indexes repeat
+  // every day (the daily reset rebuilds the schedule as [0], [0,1]), so an
+  // index marker surviving in KV would silently swallow the next day's push.
+  if (appearAt !== null && poop.lastAppearNotifiedAt !== appearAt) {
+    return { kind: 'appear', updates: { lastAppearNotifiedAt: appearAt } };
   }
 
   const hasUnclean = shown.some(i => !completed.includes(i));

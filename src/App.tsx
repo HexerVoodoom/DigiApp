@@ -765,12 +765,23 @@ export default function App() {
       // Only poop care events exist now (scheduled food events were removed).
       if (careEvent.type !== 'poop') return prev;
       const poopIndex = (prev.poopEventsScheduled || []).findIndex(t => t === careEvent.requestTime);
-      // Guard against -1 (e.g. a daily reset cleared the schedule mid-event).
-      if (poopIndex < 0) return prev;
+      const completed = prev.poopEventsCompleted || [];
+      if (poopIndex >= 0) {
+        return {
+          ...prev,
+          poopEventsCompleted: [...completed, poopIndex],
+          poopPenaltyClockAt: 0, // stop the 6h heart-drain clock
+        };
+      }
+      // requestTime not found (schedule replaced by a cloud load / stale event):
+      // complete every uncleaned shown poop so nothing uncleanable keeps the
+      // drain clock running.
+      const orphans = (prev.poopEventsShown || []).filter(i => !completed.includes(i));
+      if (orphans.length === 0) return prev;
       return {
         ...prev,
-        poopEventsCompleted: [...(prev.poopEventsCompleted || []), poopIndex],
-        poopPenaltyClockAt: 0, // stop the 6h heart-drain clock
+        poopEventsCompleted: [...completed, ...orphans],
+        poopPenaltyClockAt: 0,
       };
     });
 

@@ -97,7 +97,7 @@ Estágios/HP máx: digiegg,baby-i=1 · baby-ii=2 · rookie/champion/ultimate=3 �
   **a cada 15min** (`*/15 * * * *`, distinto via `event.cron` em
   `push-scheduler.js`) computa server-side se algum tick está devido
   (`computeDuePoopNotification`, espelha a lógica client) e manda push real
-  pelos dois canais; marca `lastAppearNotifiedIdx`/`lastDrainWarnPeriodStart`
+  pelos dois canais; marca `lastAppearNotifiedAt`/`lastDrainWarnPeriodStart`
   na própria KV pra não duplicar envio. **Lembrar de rodar `wrangler deploy`
   dentro de `workers/` depois de mudar isso** (cron trigger novo só entra em
   vigor com deploy manual, não builda sozinho no push do main).

@@ -23,6 +23,21 @@ export const checkNotificationPermission = (): NotificationPermissionState => {
 };
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
+  // Native Android: the Capacitor WebView has no browser Notification API, so
+  // the web path below would always return false and the notifications toggle
+  // could never be enabled in the APK. Permission (POST_NOTIFICATIONS on
+  // Android 13+) goes through @capacitor/push-notifications instead.
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const current = await PushNotifications.checkPermissions();
+      if (current.receive === 'granted') return true;
+      const requested = await PushNotifications.requestPermissions();
+      return requested.receive === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
   if (!('Notification' in window)) return false;
   if (Notification.permission === 'granted') return true;
   if (Notification.permission === 'denied') return false;

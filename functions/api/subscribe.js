@@ -42,7 +42,11 @@ export async function onRequestPost({ request, env }) {
       keys,
       digimonName: digimonName ?? existing.digimonName ?? 'DigiMon',
       language: language ?? existing.language ?? 'pt-BR',
-      poop: poop ?? existing.poop,
+      // Spread the incoming poop state OVER the stored one: the client never
+      // sends the worker-written dedupe markers (lastAppearNotifiedAt /
+      // lastDrainWarnPeriodStart), so replacing wholesale would wipe them and
+      // make the cron re-send the same push after every client resync.
+      poop: poop ? { ...(existing.poop ?? {}), ...poop } : existing.poop,
     }),
     { expirationTtl: 60 * 60 * 24 * 365 },
   );

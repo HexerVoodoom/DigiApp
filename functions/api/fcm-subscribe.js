@@ -47,7 +47,8 @@ export async function onRequestPost({ request, env }) {
       token,
       digimonName: digimonName ?? existing.digimonName ?? 'DigiMon',
       language: language ?? existing.language ?? 'pt-BR',
-      poop: poop ?? existing.poop,
+      // Keep the worker's dedupe markers on resync — see subscribe.js.
+      poop: poop ? { ...(existing.poop ?? {}), ...poop } : existing.poop,
     }),
     { expirationTtl: 60 * 60 * 24 * 365 },
   );

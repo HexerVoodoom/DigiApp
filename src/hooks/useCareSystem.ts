@@ -55,6 +55,31 @@ export function useCareSystem({
     }
   }, [gameState.lastResetDate, gameState.poopEventsScheduled, gameState.evolutionStage]);
 
+  // careEvent is transient React state, but poopEventsShown/Completed persist.
+  // Reconcile the two on load and whenever they change: an uncleaned poop that
+  // was on screen when the app closed must come back visible (otherwise the 6h
+  // heart drain keeps running on a poop the shower can't reach), and a poop
+  // cleared elsewhere (daily reset, cloud load) must take the sprite with it.
+  useEffect(() => {
+    const scheduled = gameState.poopEventsScheduled || [];
+    const shown = gameState.poopEventsShown || [];
+    const completed = gameState.poopEventsCompleted || [];
+    const uncleanIdx = shown.find(i => !completed.includes(i));
+
+    if (careEvent?.type === 'poop') {
+      if (uncleanIdx === undefined) setCareEvent(null);
+      return;
+    }
+    if (!careEvent && uncleanIdx !== undefined) {
+      setCareEvent({ type: 'poop', requestTime: scheduled[uncleanIdx] ?? 0, showSprite: true });
+    }
+  }, [
+    careEvent,
+    gameState.poopEventsScheduled,
+    gameState.poopEventsShown,
+    gameState.poopEventsCompleted,
+  ]);
+
   // Check care events and trigger them
   useEffect(() => {
     const interval = setInterval(() => {
@@ -84,7 +109,9 @@ export function useCareSystem({
                 body: ispt
                   ? 'Seu Digimon fez cocô! Dê um banho para limpar. 🚿'
                   : 'Your Digimon pooped! Give it a shower to clean up. 🚿',
-                tag: `poop-event-${index}`,
+                // Same tag as the server push (workers/push-scheduler.js) so
+                // the browser collapses the two into one notification.
+                tag: 'poop-event',
               },
             );
             setGameState((prev: any) => {
