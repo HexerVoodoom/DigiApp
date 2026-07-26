@@ -20,7 +20,7 @@ import { HelpModal } from './components/HelpModal';
 import { Plus, Edit2 } from 'lucide-react';
 import { CATEGORY_ATTRIBUTES, type ActivityCategory, XP_THRESHOLDS } from './types/attributes';
 import { type CareEvent } from './components/CareSystem';
-import { FORM_REQUIREMENTS, getStageLevel, canSelectWeekdays, getMaxEnergyForStage } from './types/progression';
+import { FORM_REQUIREMENTS, getStageLevel, canSelectWeekdays, getMaxEnergyForStage, GUARDIAN_HEART_CHARGE_NEEDED } from './types/progression';
 import { type Language, useTranslation } from './utils/i18n';
 import { DigiWidget } from './plugins/DigiWidgetPlugin';
 import { useGameState, getMaxHPForStage, type GameState, type Activity, type Task, type Step } from './contexts/GameStateContext';
@@ -1699,6 +1699,8 @@ export default function App() {
             language={language}
             evolutionFlash={evolutionFlash}
             feedAnim={feedAnim}
+            guardianHeartCharge={gameState.guardianHeartCharge ?? 0}
+            guardianHeartNeeded={GUARDIAN_HEART_CHARGE_NEEDED}
           />
         </div>
 

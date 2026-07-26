@@ -37,7 +37,9 @@ export function DailyReportModal({ report, onClose, language, theme = 'default' 
     },
   ];
 
-  const headline = report.degenerated
+  const headline = report.guardianHeartUsed
+    ? (isPt ? '💚 O Coração Verde te protegeu!' : '💚 The Green Heart protected you!')
+    : report.degenerated
     ? (isPt ? '💔 Seu Digimon regrediu...' : '💔 Your Digimon degenerated...')
     : report.wasPerfect
       ? (isPt ? '⭐ Dia perfeito!' : '⭐ Perfect day!')
@@ -93,7 +95,14 @@ export function DailyReportModal({ report, onClose, language, theme = 'default' 
                 : 'Tasks done, but energy was not full — feed to full before the day ends for a perfect day!'}
             </p>
           )}
-          {report.heartsLost > 0 && !report.degenerated && (
+          {report.guardianHeartUsed && (
+            <p style={{ ...mono, fontSize: '0.7rem', color: '#16a34a', paddingTop: 6 }}>
+              {isPt
+                ? 'Seu Digimon zerou os corações, mas o escudo do Coração Verde absorveu o golpe — sem degeneração! Ele sobreviveu com 1 coração. O escudo agora precisa de mais 5 dias perfeitos para recarregar.'
+                : "Your Digimon hit 0 hearts, but the Green Heart shield absorbed the hit — no degeneration! It survived with 1 heart. The shield needs another 5 perfect days to recharge."}
+            </p>
+          )}
+          {report.heartsLost > 0 && !report.degenerated && !report.guardianHeartUsed && (
             <p style={{ ...mono, fontSize: '0.7rem', color: palette.sub, paddingTop: 6 }}>
               {isPt
                 ? 'Dica: faça carinho (esfregue o pet) para recuperar meio coração.'

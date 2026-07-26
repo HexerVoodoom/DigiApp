@@ -121,6 +121,8 @@ export interface GameState {
   totalPerfectDays?: number;
   /** Shop item ids that have EVER dropped — unlocks their purchase (utils/shop.ts unlock:'drop'). */
   droppedItems?: string[];
+  /** 💚 Coração Verde: perfect days charged toward the anti-degeneration guardrail (0–GUARDIAN_HEART_CHARGE_NEEDED). Full → blocks the next HP-0 degeneration, then resets to 0. */
+  guardianHeartCharge?: number;
   /** Summary of the previous day, written at the daily reset and shown once as a report. */
   lastDayReport?: {
     date: string;
@@ -132,6 +134,7 @@ export interface GameState {
     energyWasFull?: boolean;
     perfectDays: number;
     degenerated: boolean;
+    guardianHeartUsed?: boolean;
   };
 }
 
@@ -188,6 +191,7 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
         ownedBackgrounds: loadedState.ownedBackgrounds ?? [],
         equippedBackground: loadedState.equippedBackground ?? null,
         equippedEvoItem: loadedState.equippedEvoItem ?? null,
+        guardianHeartCharge: loadedState.guardianHeartCharge ?? 0,
       } as GameState;
     }
     const savedEggType = localStorage.getItem(STORAGE_KEYS.EGG_TYPE) as GameState['eggType'] | null;
@@ -224,6 +228,7 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
       ownedBackgrounds: [],
       equippedBackground: null,
       equippedEvoItem: null,
+      guardianHeartCharge: 0,
     };
   });
 

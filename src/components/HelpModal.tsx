@@ -17,8 +17,15 @@ const SECTIONS = [
         icon: '❤️',
         labelEn: 'HP (Hearts)',
         labelPt: 'HP (Corações)',
-        descEn: 'Your Digimon\'s health. At day\'s end you lose hearts for what you left undone vs. the stage requirement; uncleaned poop drains 1 heart every 6h. Healed by rubbing (max 1 heart/day) or by using a Little Heart item (shop / dungeon drop). Reaches 0 → degeneration (you keep a head start of half the perfect days to climb back; doesn\'t stack).',
-        descPt: 'A saúde do seu Digimon. Na virada do dia você perde corações pelo que faltou em relação ao requisito do estágio; cocô não limpo tira 1 coração a cada 6h. Recupera esfregando (máx. 1 coração/dia) ou usando um Coraçãozinho (loja / drop da masmorra). Chega a 0 → degeneração (você mantém metade dos dias perfeitos de vantagem para voltar; não acumula).',
+        descEn: 'Your Digimon\'s health. At day\'s end you lose hearts for what you left undone vs. the stage requirement; uncleaned poop drains 1 heart every 6h. Healed by rubbing (max 1 heart/day) or by using a Little Heart item (shop / dungeon drop). Reaches 0 → degeneration (you keep a head start of half the perfect days to climb back; doesn\'t stack) — unless the 💚 Green Heart shield is charged, see below.',
+        descPt: 'A saúde do seu Digimon. Na virada do dia você perde corações pelo que faltou em relação ao requisito do estágio; cocô não limpo tira 1 coração a cada 6h. Recupera esfregando (máx. 1 coração/dia) ou usando um Coraçãozinho (loja / drop da masmorra). Chega a 0 → degeneração (você mantém metade dos dias perfeitos de vantagem para voltar; não acumula) — a menos que o escudo 💚 Coração Verde esteja carregado, veja abaixo.',
+      },
+      {
+        icon: '💚',
+        labelEn: 'Green Heart (guardrail)',
+        labelPt: 'Coração Verde (guardrail)',
+        descEn: 'An anti-degeneration shield shown as a badge next to your hearts. Charges +1 per perfect day (independent of the Digivolution bar) and never decays on a bad day. Once full (5/5), the next time HP hits 0 it absorbs the hit — no degeneration, your Digimon survives with 1 heart — then resets to 0, needing 5 more perfect days to recharge.',
+        descPt: 'Um escudo anti-degeneração mostrado como um selo ao lado dos corações. Carrega +1 por dia perfeito (independente da barra de Digivolução) e nunca decai em dia ruim. Ao encher (5/5), na próxima vez que o HP zerar ele absorve o golpe — sem degeneração, seu Digimon sobrevive com 1 coração — e depois zera, precisando de mais 5 dias perfeitos para recarregar.',
       },
       {
         icon: '⚡',

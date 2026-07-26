@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FORM_REQUIREMENTS, MAX_HP_BY_FORM, getStageLevel, canSelectWeekdays, getMaxEnergyForStage } from '../types/progression';
+import { FORM_REQUIREMENTS, MAX_HP_BY_FORM, getStageLevel, canSelectWeekdays, getMaxEnergyForStage, GUARDIAN_HEART_CHARGE_NEEDED } from '../types/progression';
 import { CATEGORY_ATTRIBUTES } from '../types/attributes';
 
 // Replicate the performDailyReset state-updater logic for unit testing.
@@ -48,6 +48,8 @@ function simulateReset(prev: any): any {
   let newEvolutionStage = prev.evolutionStage;
   let finalUnlockedEvolutions = [...prev.unlockedEvolutions];
   let wasDegeneratedByHP = false;
+  let guardianHeartUsed = false;
+  let newGuardianHeartCharge = prev.guardianHeartCharge ?? 0;
   let newMaxActivityCap = prev.maxActivityCap;
 
   // Proportional HP loss vs the same daily goal.
@@ -59,6 +61,7 @@ function simulateReset(prev: any): any {
 
   if (dayWasPerfect) {
     newPerfectDays++;
+    newGuardianHeartCharge = Math.min(GUARDIAN_HEART_CHARGE_NEEDED, newGuardianHeartCharge + 1);
     let dailyVirus = 0, dailyData = 0, dailyVaccine = 0;
     availableActivities.forEach((activity: any) => {
       const attrs = (CATEGORY_ATTRIBUTES as any)[activity.category];
@@ -95,13 +98,19 @@ function simulateReset(prev: any): any {
   }
 
   if (newHP === 0) {
-    wasDegeneratedByHP = true;
-    if (prev.evolutionStage === 'tapirmon') newEvolutionStage = 'pukamon';
-    else if (prev.evolutionStage === 'pichimon') newEvolutionStage = 'digiegg';
-    const degeneratedLevel = getStageLevel(newEvolutionStage);
-    newHP = MAX_HP_BY_FORM[degeneratedLevel];
-    const degReqs = FORM_REQUIREMENTS[degeneratedLevel];
-    newPerfectDays = Math.floor(degReqs.required / 2);
+    if (newGuardianHeartCharge >= GUARDIAN_HEART_CHARGE_NEEDED) {
+      guardianHeartUsed = true;
+      newGuardianHeartCharge = 0;
+      newHP = 1;
+    } else {
+      wasDegeneratedByHP = true;
+      if (prev.evolutionStage === 'tapirmon') newEvolutionStage = 'pukamon';
+      else if (prev.evolutionStage === 'pichimon') newEvolutionStage = 'digiegg';
+      const degeneratedLevel = getStageLevel(newEvolutionStage);
+      newHP = MAX_HP_BY_FORM[degeneratedLevel];
+      const degReqs = FORM_REQUIREMENTS[degeneratedLevel];
+      newPerfectDays = Math.floor(degReqs.required / 2);
+    }
   }
 
   const resetActivities = prev.activities.map((a: any) => ({
@@ -127,6 +136,8 @@ function simulateReset(prev: any): any {
     evolutionStage: newEvolutionStage,
     unlockedEvolutions: finalUnlockedEvolutions,
     degeneratedByHP: wasDegeneratedByHP,
+    guardianHeartCharge: newGuardianHeartCharge,
+    guardianHeartUsed,
     lastDayWasPerfect: dayWasPerfect,
     maxActivityCap: newMaxActivityCap,
   };
@@ -148,6 +159,7 @@ const baseState = () => ({
   currentBranch: 'data' as const,
   maxActivityCap: 6,
   lastResetDate: 'yesterday',
+  guardianHeartCharge: 0,
 });
 
 describe('performDailyReset — proportional HP loss', () => {
@@ -256,5 +268,75 @@ describe('performDailyReset — degeneration', () => {
     expect(result.evolutionStage).toBe('pukamon'); // rookie → baby-ii
     // baby-ii.required = 3 → head start = floor(3/2) = 1
     expect(result.perfectDays).toBe(Math.floor(FORM_REQUIREMENTS['baby-ii'].required / 2));
+  });
+});
+
+describe('performDailyReset — 💚 Coração Verde (guardian heart guardrail)', () => {
+  it('charges +1 per perfect day, independent of the evolution perfectDays counter', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: true }));
+    const result = simulateReset({ ...baseState(), tasks, guardianHeartCharge: 2 });
+    expect(result.lastDayWasPerfect).toBe(true);
+    expect(result.guardianHeartCharge).toBe(3);
+  });
+
+  it('caps at GUARDIAN_HEART_CHARGE_NEEDED (does not overflow past 5)', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: true }));
+    const result = simulateReset({
+      ...baseState(), tasks, guardianHeartCharge: GUARDIAN_HEART_CHARGE_NEEDED,
+    });
+    expect(result.guardianHeartCharge).toBe(GUARDIAN_HEART_CHARGE_NEEDED);
+  });
+
+  it('does NOT decay on a non-perfect day (it is a slow charge, not a streak)', () => {
+    // 1 of 4 tasks done → heart loss, not a perfect day
+    const tasks = Array.from({ length: 10 }, (_, i) => ({ id: `t${i}`, completed: i < 1 }));
+    const result = simulateReset({ ...baseState(), tasks, healthPoints: 3, guardianHeartCharge: 3 });
+    expect(result.lastDayWasPerfect).toBe(false);
+    expect(result.guardianHeartCharge).toBe(3);
+  });
+
+  it('blocks degeneration when fully charged: survives at 1 HP instead, and consumes the charge', () => {
+    const tasks = Array.from({ length: 3 }, (_, i) => ({ id: `t${i}`, completed: false }));
+    const result = simulateReset({
+      ...baseState(),
+      tasks,
+      healthPoints: 1,
+      evolutionStage: 'tapirmon',
+      guardianHeartCharge: GUARDIAN_HEART_CHARGE_NEEDED,
+    });
+    expect(result.guardianHeartUsed).toBe(true);
+    expect(result.degeneratedByHP).toBe(false);
+    expect(result.evolutionStage).toBe('tapirmon'); // unchanged — no degeneration
+    expect(result.healthPoints).toBe(1);
+    expect(result.guardianHeartCharge).toBe(0); // consumed — needs 5 more perfect days
+  });
+
+  it('degenerates normally when the charge is below the threshold (e.g. 4/5)', () => {
+    const tasks = Array.from({ length: 3 }, (_, i) => ({ id: `t${i}`, completed: false }));
+    const result = simulateReset({
+      ...baseState(),
+      tasks,
+      healthPoints: 1,
+      evolutionStage: 'tapirmon',
+      guardianHeartCharge: GUARDIAN_HEART_CHARGE_NEEDED - 1,
+    });
+    expect(result.guardianHeartUsed).toBe(false);
+    expect(result.degeneratedByHP).toBe(true);
+    expect(result.evolutionStage).toBe('pukamon');
+    // The charge keeps building toward the shield — an actual degeneration
+    // doesn't reset or penalize it, only a successful BLOCK consumes it.
+    expect(result.guardianHeartCharge).toBe(GUARDIAN_HEART_CHARGE_NEEDED - 1);
+  });
+
+  it('a day that neither loses HP nor is perfect leaves the charge untouched', () => {
+    // All registered tasks done, but fewer than the requirement AND energy not
+    // full → no heart loss, not perfect either.
+    const tasks = Array.from({ length: 2 }, (_, i) => ({ id: `t${i}`, completed: true }));
+    const result = simulateReset({
+      ...baseState(), tasks, energyPoints: 0, guardianHeartCharge: 2,
+    });
+    expect(result.lastDayWasPerfect).toBe(false);
+    expect(result.healthPoints).toBe(3);
+    expect(result.guardianHeartCharge).toBe(2);
   });
 });

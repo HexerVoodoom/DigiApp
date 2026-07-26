@@ -24,6 +24,12 @@ export const MAX_HP_BY_FORM = {
 
 export type EvolutionStage = keyof typeof FORM_REQUIREMENTS;
 
+// 💚 Coração Verde: anti-degeneration guardrail. Charges by 1 per perfect day
+// (independent of the evolution perfectDays counter, and never decays on a bad
+// day — it's a slow-building safety net, not a streak). Fixed at 5 for every
+// stage; once full it blocks the NEXT HP-0 degeneration and resets to 0.
+export const GUARDIAN_HEART_CHARGE_NEEDED = 5;
+
 // Estágios agrupados por nível, cobrindo as três linhas (Tapirmon, Veemon, Salamon)
 const STAGES_BY_LEVEL: Record<Exclude<EvolutionStage, 'digiegg'>, readonly string[]> = {
   'baby-i': ['pichimon', 'chicomon', 'yukimibotamon'],

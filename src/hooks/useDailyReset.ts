@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { FORM_REQUIREMENTS, MAX_HP_BY_FORM, getStageLevel, canSelectWeekdays } from '../types/progression';
+import { FORM_REQUIREMENTS, MAX_HP_BY_FORM, getStageLevel, canSelectWeekdays, GUARDIAN_HEART_CHARGE_NEEDED } from '../types/progression';
 import { STORAGE_KEYS } from '../utils/storageKeys';
 import { getNextEvolution } from '../utils/dailyReset';
 import { EVO_ITEMS } from '../utils/shop';
@@ -36,6 +36,7 @@ interface ResetGameState {
   poopEventsShown: number[];
   poopEventsCompleted: number[];
   equippedEvoItem?: string | null;
+  guardianHeartCharge?: number;
 }
 
 type Attr = 'virus' | 'data' | 'vaccine';
@@ -154,6 +155,8 @@ export function useDailyReset({
       let newEvolutionStage = prev.evolutionStage;
       let finalUnlockedEvolutions = [...prev.unlockedEvolutions];
       let wasDegeneratedByHP = false;
+      let guardianHeartUsed = false;
+      let newGuardianHeartCharge = prev.guardianHeartCharge ?? 0;
       let usedEvoItem = false;
       let newMaxActivityCap = prev.maxActivityCap;
       let newCurrentBranch = prev.currentBranch as 'virus' | 'data' | 'vaccine';
@@ -179,6 +182,10 @@ export function useDailyReset({
         newPerfectDays++;
         // Version B: attribute points come from feeding, not from daily reset.
         // newRecentAttrs carries whatever was accumulated via handleFeed during the day.
+        // 💚 Coração Verde: charges +1 per perfect day, independent of the
+        // evolution counter above and never decays on a bad day — it's a slow
+        // safety net, not a streak.
+        newGuardianHeartCharge = Math.min(GUARDIAN_HEART_CHARGE_NEEDED, newGuardianHeartCharge + 1);
       } else {
         // Streak break: any non-perfect day loses one day of accumulated progress
         newPerfectDays = Math.max(0, prev.perfectDays - 1);
@@ -245,20 +252,29 @@ export function useDailyReset({
         }
       }
 
-      // Degeneration by HP
+      // Degeneration by HP — 💚 Coração Verde guardrail: if fully charged (5
+      // perfect days), it absorbs the hit instead of letting the Digimon
+      // degenerate. The pet survives at 1 HP (still shaken, not risk-free) and
+      // the shield is consumed, needing another 5 perfect days to recharge.
       if (newHP === 0) {
-        wasDegeneratedByHP = true;
-        newEvolutionStage = getDegeneratedStage(prev.evolutionStage, prev.eggType, newCurrentBranch);
+        if (newGuardianHeartCharge >= GUARDIAN_HEART_CHARGE_NEEDED) {
+          guardianHeartUsed = true;
+          newGuardianHeartCharge = 0;
+          newHP = 1;
+        } else {
+          wasDegeneratedByHP = true;
+          newEvolutionStage = getDegeneratedStage(prev.evolutionStage, prev.eggType, newCurrentBranch);
 
-        const degeneratedLevel = getStageLevel(newEvolutionStage);
-        newHP = MAX_HP_BY_FORM[degeneratedLevel];
-        // Recovery discount: climbing back to the stage you fell from costs half
-        // the perfect days (head start at floor(required/2)). Non-cumulative — it's
-        // always half of the *new* (lower) stage's requirement, so a second
-        // degeneration gets the same discount again, never a smaller one.
-        newPerfectDays = Math.floor(FORM_REQUIREMENTS[degeneratedLevel].required / 2);
-        // Also reset recent branch window after forced degen
-        newRecentAttrs = { virus: 0, data: 0, vaccine: 0 };
+          const degeneratedLevel = getStageLevel(newEvolutionStage);
+          newHP = MAX_HP_BY_FORM[degeneratedLevel];
+          // Recovery discount: climbing back to the stage you fell from costs half
+          // the perfect days (head start at floor(required/2)). Non-cumulative — it's
+          // always half of the *new* (lower) stage's requirement, so a second
+          // degeneration gets the same discount again, never a smaller one.
+          newPerfectDays = Math.floor(FORM_REQUIREMENTS[degeneratedLevel].required / 2);
+          // Also reset recent branch window after forced degen
+          newRecentAttrs = { virus: 0, data: 0, vaccine: 0 };
+        }
       }
 
       const resetActivities = prev.activities.map((activity: Activity) => ({
@@ -290,6 +306,7 @@ export function useDailyReset({
         currentBranch: newCurrentBranch,
         unlockedEvolutions: finalUnlockedEvolutions,
         degeneratedByHP: wasDegeneratedByHP,
+        guardianHeartCharge: newGuardianHeartCharge,
         lastDayWasPerfect: dayWasPerfect,
         // Lifetime perfect-day counter (missions) — never resets on evolution
         totalPerfectDays: (prev.totalPerfectDays ?? 0) + (dayWasPerfect ? 1 : 0),
@@ -314,6 +331,7 @@ export function useDailyReset({
           energyWasFull,
           perfectDays: newPerfectDays,
           degenerated: wasDegeneratedByHP,
+          guardianHeartUsed,
         },
       };
     });

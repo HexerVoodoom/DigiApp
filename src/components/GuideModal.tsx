@@ -83,7 +83,9 @@ export function GuideModal({ isOpen, onClose, theme = 'default' }: GuideModalPro
                 <strong> poop</strong> also drains <strong>1 heart every 6 hours</strong>.
                 Hearts are healed by <strong>rubbing your Digimon</strong> (up to
                 <strong> 1 heart per day</strong>) or by using a <strong>Little Heart</strong> item
-                (bought in the shop or dropped in the dungeon). If HP hits 0, your Digimon degenerates.
+                (bought in the shop or dropped in the dungeon). If HP hits 0, your Digimon
+                degenerates — unless the <strong>💚 Green Heart</strong> shield is fully charged
+                (see section 6), in which case it survives with 1 heart instead.
               </li>
               <li>
                 <strong>⚡ Energy</strong> — The number of energy bars equals your stage's
@@ -189,6 +191,14 @@ export function GuideModal({ isOpen, onClose, theme = 'default' }: GuideModalPro
               needed for that stage (e.g. Rookie → Champion needs 4, but after a
               degeneration only 2 more are required). This discount doesn't stack —
               it's always half again if you degenerate a second time.
+            </p>
+            <p className="mt-2">
+              <strong>💚 Green Heart (guardrail):</strong> a shield that charges
+              +1 per perfect day (shown as a badge next to your hearts) and never
+              decays on a bad day. Once it reaches <strong>5/5</strong>, the NEXT
+              time HP would hit 0 it absorbs the hit instead — no degeneration,
+              your Digimon survives with 1 heart — and the shield resets to 0,
+              needing another 5 perfect days to recharge.
             </p>
           </section>
 

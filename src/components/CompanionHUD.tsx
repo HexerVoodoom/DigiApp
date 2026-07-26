@@ -54,6 +54,9 @@ interface CompanionHUDProps {
   hasNewItems?: boolean;
   evolutionFlash?: boolean;
   feedAnim?: { emoji: string; n: number } | null;
+  /** 💚 Coração Verde: perfect days charged toward the anti-degeneration guardrail (0–guardianHeartNeeded). */
+  guardianHeartCharge?: number;
+  guardianHeartNeeded?: number;
 }
 
 export const CompanionHUD = memo(function CompanionHUD({
@@ -96,6 +99,8 @@ export const CompanionHUD = memo(function CompanionHUD({
   hasNewItems = false,
   evolutionFlash = false,
   feedAnim = null,
+  guardianHeartCharge = 0,
+  guardianHeartNeeded = 5,
 }: CompanionHUDProps) {
   const isWin98 = theme === 'win98';
   const isGlitch = theme === 'glitch';
@@ -554,6 +559,36 @@ export const CompanionHUD = memo(function CompanionHUD({
     return hearts;
   };
 
+  // 💚 Coração Verde: small badge next to the HP hearts showing how many of
+  // the 5 perfect days needed to charge the anti-degeneration guardrail have
+  // built up. Full (ready) glows; charged-but-not-full shows the count.
+  const renderGuardianHeart = () => {
+    const isPt = language === 'pt-BR';
+    const isReady = guardianHeartCharge >= guardianHeartNeeded;
+    const title = isPt
+      ? `💚 Coração Verde: ${guardianHeartCharge}/${guardianHeartNeeded} dias perfeitos${isReady ? ' — pronto! Vai evitar a próxima degeneração.' : ' para carregar o escudo anti-degeneração.'}`
+      : `💚 Green Heart: ${guardianHeartCharge}/${guardianHeartNeeded} perfect days${isReady ? ' — ready! Will block the next degeneration.' : ' to charge the anti-degeneration shield.'}`;
+
+    return (
+      <div
+        title={title}
+        className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5"
+        style={{
+          fontFamily: 'monospace',
+          fontSize: '9px',
+          lineHeight: 1,
+          backgroundColor: isReady ? 'rgba(34,197,94,0.25)' : 'rgba(0,0,0,0.25)',
+          boxShadow: isReady ? '0 0 6px rgba(74,222,128,0.8)' : 'none',
+          color: isReady ? '#86efac' : '#9ca3af',
+          filter: guardianHeartCharge === 0 ? 'grayscale(1) opacity(0.6)' : 'none',
+        }}
+      >
+        <span style={{ fontSize: '10px' }}>💚</span>
+        <span>{guardianHeartCharge}/{guardianHeartNeeded}</span>
+      </div>
+    );
+  };
+
   // Render segmented Digivolution bar using perfect days
   const renderDigivolutionBar = () => {
     const totalSegments = requiredDays;
@@ -650,6 +685,7 @@ export const CompanionHUD = memo(function CompanionHUD({
             title={language === 'pt-BR' ? `HP: ${healthPoints}/${maxHealthPoints} — cai quando você perde cuidados` : `HP: ${healthPoints}/${maxHealthPoints} — drops when care events are missed`}
           >
             {renderHearts()}
+            {renderGuardianHeart()}
           </div>
 
           {/* Evolution flash overlay */}
