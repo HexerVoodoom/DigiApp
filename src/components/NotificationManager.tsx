@@ -7,6 +7,7 @@ import {
   unsubscribeFromPush, registerForPushNotifications, unregisterFromPushNotifications,
   syncPushPoopState, syncFcmPoopState, type PoopPushState,
 } from '../utils/notifications';
+import { getSpriteForStage } from '../utils/sprites';
 
 interface Activity {
   id: string;
@@ -27,6 +28,7 @@ interface NotificationManagerProps {
   tasks: Task[];
   userName: string;
   digimonName: string;
+  evolutionStage: string;
   language: 'pt-BR' | 'en-US';
   enabled: boolean;
   healthPoints: number;
@@ -41,6 +43,7 @@ export function NotificationManager({
   tasks,
   userName,
   digimonName,
+  evolutionStage,
   language,
   enabled,
   healthPoints,
@@ -49,6 +52,7 @@ export function NotificationManager({
   totalRequired,
   poop,
 }: NotificationManagerProps) {
+  const petIcon = getSpriteForStage(evolutionStage);
   const lastEveningWarnDate = useRef<string>('');
   const lastNudge10Date = useRef<string>('');
   const lastNudge16Date = useRef<string>('');
@@ -108,10 +112,10 @@ export function NotificationManager({
   useEffect(() => {
     if (!enabled) return;
 
-    checkAndShowNotifications(userName, language);
+    checkAndShowNotifications(userName, language, petIcon);
 
     const interval = setInterval(() => {
-      checkAndShowNotifications(userName, language);
+      checkAndShowNotifications(userName, language, petIcon);
     }, 60000);
 
     return () => clearInterval(interval);
@@ -143,6 +147,8 @@ export function NotificationManager({
               ? `Complete ao menos ${halfRequired} tarefa(s) hoje ou seu parceiro vai regredir amanhã!`
               : `Complete at least ${halfRequired} task(s) today or your partner will degenerate tomorrow!`,
             tag: 'hp-critical-evening',
+            icon: petIcon,
+            image: petIcon,
           },
         );
       } else if (!atRisk && healthPoints < maxHealthPoints) {
@@ -155,6 +161,8 @@ export function NotificationManager({
               ? `Você tem ${completedSteps}/${totalRequired} tarefas. Continue assim!`
               : `You have ${completedSteps}/${totalRequired} tasks done. Keep it up!`,
             tag: 'evening-reminder',
+            icon: petIcon,
+            image: petIcon,
           },
         );
       }
@@ -170,8 +178,8 @@ export function NotificationManager({
     // Native Android: schedule via AlarmManager so they fire even with app closed
     if (Capacitor.isNativePlatform()) {
       const ispt = language === 'pt-BR';
-      const nudgeTitle = ispt ? `📋 ${digimonName} está te lembrando!` : `📋 ${digimonName} is reminding you!`;
-      const nudgeBody = ispt ? 'Você ainda tem tarefas pendentes hoje! Vamos lá! 💪' : 'You still have pending tasks today! Let\'s go! 💪';
+      const nudgeTitle = ispt ? `📋 ${digimonName} está te chamando!` : `📋 ${digimonName} is calling you!`;
+      const nudgeBody = ispt ? 'Você ainda tem tarefas pendentes hoje! Vem cumprir! 💪' : 'You still have pending tasks today! Come finish them! 💪';
 
       if (completedSteps < totalRequired) {
         DigiAlarm.scheduleAlarm({ id: 'pet-nudge-10', title: nudgeTitle, body: nudgeBody, scheduledTime: '10:00' }).catch(() => {});
@@ -206,8 +214,8 @@ export function NotificationManager({
       if (hh === 10 && completedSteps < totalRequired && lastNudge10Date.current !== today) {
         lastNudge10Date.current = today;
         showNotification(
-          ispt ? `📋 ${digimonName} está te lembrando!` : `📋 ${digimonName} is reminding you!`,
-          { body: ispt ? 'Você ainda tem tarefas pendentes hoje! Vamos lá! 💪' : 'You still have pending tasks today! Let\'s go! 💪', tag: 'pet-nudge-10' },
+          ispt ? `📋 ${digimonName} está te chamando!` : `📋 ${digimonName} is calling you!`,
+          { body: ispt ? 'Você ainda tem tarefas pendentes hoje! Vem cumprir! 💪' : 'You still have pending tasks today! Come finish them! 💪', tag: 'pet-nudge-10', icon: petIcon, image: petIcon },
         );
       }
 
@@ -215,8 +223,8 @@ export function NotificationManager({
       if (hh === 16 && completedSteps < totalRequired && lastNudge16Date.current !== today) {
         lastNudge16Date.current = today;
         showNotification(
-          ispt ? `📋 ${digimonName} está te lembrando!` : `📋 ${digimonName} is reminding you!`,
-          { body: ispt ? 'Suas tarefas ainda estão esperando! 🎯' : 'Your tasks are still waiting! 🎯', tag: 'pet-nudge-16' },
+          ispt ? `📋 ${digimonName} está te chamando!` : `📋 ${digimonName} is calling you!`,
+          { body: ispt ? 'Suas tarefas ainda estão esperando! Vem cumprir! 🎯' : 'Your tasks are still waiting! Come finish them! 🎯', tag: 'pet-nudge-16', icon: petIcon, image: petIcon },
         );
       }
 
@@ -224,8 +232,8 @@ export function NotificationManager({
       if (hh === 21 && completedSteps < totalRequired && lastNudge21Date.current !== today) {
         lastNudge21Date.current = today;
         showNotification(
-          ispt ? `⏰ ${digimonName} está preocupado!` : `⏰ ${digimonName} is worried!`,
-          { body: ispt ? 'Ainda dá tempo! Complete suas tarefas antes de dormir. 🌙' : 'Still time! Complete your tasks before bed. 🌙', tag: 'pet-nudge-21' },
+          ispt ? `⏰ ${digimonName} está te chamando!` : `⏰ ${digimonName} is calling you!`,
+          { body: ispt ? 'Ainda dá tempo! Complete suas tarefas antes de dormir. 🌙' : 'Still time! Complete your tasks before bed. 🌙', tag: 'pet-nudge-21', icon: petIcon, image: petIcon },
         );
       }
 
@@ -234,7 +242,7 @@ export function NotificationManager({
         lastGoodnightDate.current = today;
         showNotification(
           `🌙 ${digimonName} está desejando boa noite`,
-          { body: ispt ? 'Durma bem! Até amanhã! 😴' : 'Sleep well! See you tomorrow! 😴', tag: 'pet-goodnight' },
+          { body: ispt ? 'Durma bem! Até amanhã! 😴' : 'Sleep well! See you tomorrow! 😴', tag: 'pet-goodnight', icon: petIcon, image: petIcon },
         );
       }
     };

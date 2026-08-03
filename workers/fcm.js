@@ -83,7 +83,7 @@ export async function getFcmAccessToken(serviceAccount) {
 /**
  * Send one FCM push to a device token.
  * @param {string} token - the device's FCM registration token
- * @param {{title: string, body: string, tag?: string}} notif
+ * @param {{title: string, body: string, tag?: string, image?: string}} notif
  * @param {string} projectId - Firebase project_id (from the service account)
  * @param {string} accessToken - from getFcmAccessToken()
  * @returns {{ status: number, ok: boolean, error?: string }}
@@ -100,10 +100,13 @@ export async function sendFcmPush(token, notif, projectId, accessToken) {
       body: JSON.stringify({
         message: {
           token,
-          notification: { title: notif.title, body: notif.body },
+          notification: { title: notif.title, body: notif.body, image: notif.image },
           android: {
             priority: 'high',
-            notification: { channel_id: 'digiapp_push', tag: notif.tag },
+            // `image` here is the big-picture shown when the notification is
+            // expanded — an absolute URL the OS fetches itself (see notif.image,
+            // built in push-scheduler.js from public/notif-icons/).
+            notification: { channel_id: 'digiapp_push', tag: notif.tag, image: notif.image },
           },
         },
       }),

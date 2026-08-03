@@ -102,6 +102,19 @@ Estágios/HP máx: digiegg,baby-i=1 · baby-ii=2 · rookie/champion/ultimate=3 �
   na própria KV pra não duplicar envio. **Lembrar de rodar `wrangler deploy`
   dentro de `workers/` depois de mudar isso** (cron trigger novo só entra em
   vigor com deploy manual, não builda sozinho no push do main).
+  **Ícone do Digimon nas notificações:** todo push (nudges 10/16/21/22h e cocô)
+  leva a sprite do estágio atual — `icon` (relativo, lido por `sw.js` no
+  handler `push`) e `image` (URL absoluta, usada pelo big-picture do FCM
+  Android, que busca a imagem ele mesmo). Fonte: `public/notif-icons/<stage>.png`
+  (66 PNGs 192×192 gerados por `scripts/generate-notif-icons.mjs`, pois o
+  worker não enxerga os assets com hash do Vite em `src/assets/`). O mapa
+  `digimonName → arquivo` fica duplicado em `workers/push-scheduler.js`
+  (`DIGIMON_ICON_FILE`) espelhando `DIGIMON_STAGE_NAMES` em
+  `src/constants/labels.ts` — **atualizar os dois** ao adicionar uma forma
+  nova, e rodar o script de novo. Notificações locais (foreground/PWA, em
+  `NotificationManager.tsx`) usam a sprite via `getSpriteForStage` direto
+  (sem precisar do diretório estático). Alarmes nativos via `DigiAlarmPlugin`
+  (Kotlin/AlarmManager) continuam só texto — não têm imagem.
 - Widgets Android: `android/.../widget/WidgetRenderer.kt` + layouts. Dados via
   `DigiWidgetPlugin` (SharedPreferences). Testes: `npx vitest run` cobre lógica de reset.
 
