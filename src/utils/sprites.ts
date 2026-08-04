@@ -68,6 +68,40 @@ import gabumonSprite from '../assets/gabumon_dmc.png';
 import piyomonSprite from '../assets/piyomon_dmc.png';
 import tentomonSprite from '../assets/tentomon_dmc.png';
 
+// Animated GIFs (src/assets/dmc_gif/) — same Digimon Pendulum Color source strips,
+// recortadas frame a frame. Só existem pra parte do roster (ver README da pasta);
+// stages sem GIF continuam com o PNG estático + bounce em CompanionHUD/etc.
+import agumonGif from '../assets/dmc_gif/agumon_dmc.gif';
+import airdramonGif from '../assets/dmc_gif/airdramon_dmc.gif';
+import andromonGif from '../assets/dmc_gif/andromon_dmc.gif';
+import angemonGif from '../assets/dmc_gif/angemon_dmc.gif';
+import bakemonGif from '../assets/dmc_gif/bakemon_dmc.gif';
+import betamonGif from '../assets/dmc_gif/betamon_dmc.gif';
+import birdramonGif from '../assets/dmc_gif/birdramon_dmc.gif';
+import devimonGif from '../assets/dmc_gif/devimon_dmc.gif';
+import digitamamonGif from '../assets/dmc_gif/digitamamon_dmc.gif';
+import etemonGif from '../assets/dmc_gif/etemon_dmc.gif';
+import gabumonGif from '../assets/dmc_gif/gabumon_dmc.gif';
+import gaioumonGif from '../assets/dmc_gif/gaioumon_dmc.gif';
+import garurumonGif from '../assets/dmc_gif/garurumon_dmc.gif';
+import greymonGif from '../assets/dmc_gif/greymon_dmc.gif';
+import kabuterimonGif from '../assets/dmc_gif/kabuterimon_dmc.gif';
+import kuwagamonGif from '../assets/dmc_gif/kuwagamon_dmc.gif';
+import megadramonGif from '../assets/dmc_gif/megadramon_dmc.gif';
+import meramonGif from '../assets/dmc_gif/meramon_dmc.gif';
+import monochromonGif from '../assets/dmc_gif/monochromon_dmc.gif';
+import monzaemonGif from '../assets/dmc_gif/monzaemon_dmc.gif';
+import nanimonGif from '../assets/dmc_gif/nanimon_dmc.gif';
+import numemonGif from '../assets/dmc_gif/numemon_dmc.gif';
+import ogremonGif from '../assets/dmc_gif/ogremon_dmc.gif';
+import palmonGif from '../assets/dmc_gif/palmon_dmc.gif';
+import patamonGif from '../assets/dmc_gif/patamon_dmc.gif';
+import piyomonGif from '../assets/dmc_gif/piyomon_dmc.gif';
+import seadramonGif from '../assets/dmc_gif/seadramon_dmc.gif';
+import titamonGif from '../assets/dmc_gif/titamon_dmc.gif';
+import tuskmonGif from '../assets/dmc_gif/tuskmon_dmc.gif';
+import vademonGif from '../assets/dmc_gif/vademon_dmc.gif';
+
 export const STAGE_SPRITES: Record<string, string> = {
   digiegg: digiEggSprite,
   pichimon: pichimonSprite,
@@ -141,8 +175,51 @@ export const STAGE_SPRITES: Record<string, string> = {
   'raidramon-armor': raidramonSprite,
 };
 
+// Stages that have an animated GIF counterpart (src/assets/dmc_gif/) — these
+// replace the static PNG entirely; every other stage keeps the PNG + its
+// component's own idle "bounce" (CompanionHUD squash, dungeon-idle keyframe).
+export const STAGE_SPRITE_GIFS: Record<string, string> = {
+  agumon: agumonGif,
+  airdramon: airdramonGif,
+  andromon: andromonGif,
+  angemon: angemonGif,
+  bakemon: bakemonGif,
+  betamon: betamonGif,
+  birdramon: birdramonGif,
+  devimon: devimonGif,
+  digitamamon: digitamamonGif,
+  etemon: etemonGif,
+  gabumon: gabumonGif,
+  gaioumon: gaioumonGif,
+  garurumon: garurumonGif,
+  greymon: greymonGif,
+  kabuterimon: kabuterimonGif,
+  kuwagamon: kuwagamonGif,
+  megadramon: megadramonGif,
+  meramon: meramonGif,
+  monochromon: monochromonGif,
+  monzaemon: monzaemonGif,
+  nanimon: nanimonGif,
+  numemon: numemonGif,
+  ogremon: ogremonGif,
+  palmon: palmonGif,
+  patamon: patamonGif,
+  piyomon: piyomonGif,
+  seadramon: seadramonGif,
+  titamon: titamonGif,
+  tuskmon: tuskmonGif,
+  vademon: vademonGif,
+};
+
 export function getSpriteForStage(stage: string): string {
-  return STAGE_SPRITES[stage.toLowerCase()] ?? digiEggSprite;
+  const key = stage.toLowerCase();
+  return STAGE_SPRITE_GIFS[key] ?? STAGE_SPRITES[key] ?? digiEggSprite;
+}
+
+/** True when `stage` renders the animated GIF (already-animated frames) instead
+ * of a static PNG — callers should skip their own idle "bounce" animation then. */
+export function hasAnimatedSprite(stage: string): boolean {
+  return stage.toLowerCase() in STAGE_SPRITE_GIFS;
 }
 
 /** Sprites drawn facing LEFT by default — flip them when they should face right.

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import imgHeartSprite from "figma:asset/7e77e9ec45ca6381843c93b205d4f8cdd7ddf568.png";
 import bgCyberpunk from "figma:asset/7342065b1193c2befe599eb2d86ef8641f1a596c.png";
-import { getSpriteForStage, LEFT_FACING_STAGES } from '../utils/sprites';
+import { getSpriteForStage, hasAnimatedSprite, LEFT_FACING_STAGES } from '../utils/sprites';
 import { PET_BACKGROUNDS } from '../utils/backgrounds';
 import { EnergyBar } from './EnergyBar';
 import { CareSystem, CareEvent } from './CareSystem';
@@ -390,8 +390,11 @@ export const CompanionHUD = memo(function CompanionHUD({
 
   // Get squash/stretch scale (10% total variation: 90% to 100%)
   // Triceramon exclusively skips this bounce — sprite request from the owner.
+  // Stages with an animated GIF sprite also skip it — their own frames already
+  // animate, stacking the squash on top just looks jittery.
   const getSquashScale = () => {
     if (evolutionStage === 'triceramon') return 1.0;
+    if (hasAnimatedSprite(evolutionStage)) return 1.0;
     return squashFrame === 0 ? 0.9 : 1.0; // 90% or 100% of original height
   };
 
