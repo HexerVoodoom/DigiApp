@@ -12,12 +12,6 @@ declare module '*.png' {
   export default url;
 }
 
-// Animated GIF imports (e.g. src/assets/dmc_gif/*.gif) resolve to string URLs
-declare module '*.gif' {
-  const url: string;
-  export default url;
-}
-
 // Versioned package aliases (vite.config.ts maps pkg@version → pkg)
 declare module 'lucide-react@*' {
   export * from 'lucide-react';

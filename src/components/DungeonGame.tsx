@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getSpriteForStage, hasAnimatedSprite } from '../utils/sprites';
+import { getSpriteForStage } from '../utils/sprites';
 import { playTaskComplete, playDegenerate, playFeed } from '../utils/sounds';
 import { getStageLevel } from '../types/progression';
 import {
@@ -392,7 +392,7 @@ export function DungeonGame({ evolutionStage, language, onEnter, onLose, onHeart
               ['--flip' as string]: '-1',
               filter: hitFx === 'enemy' ? 'brightness(3) drop-shadow(0 0 10px #f87171)' : 'drop-shadow(0 0 8px rgba(248,113,113,0.35))',
               transition: 'filter 0.15s',
-              animation: hasAnimatedSprite(enemy.stage) ? undefined : 'dungeon-idle 1.6s ease-in-out infinite',
+              animation: 'dungeon-idle 1.6s ease-in-out infinite',
             } as React.CSSProperties}
           />
           {/* Pet (bottom-left) */}
@@ -408,7 +408,7 @@ export function DungeonGame({ evolutionStage, language, onEnter, onLose, onHeart
               imageRendering: 'pixelated',
               filter: hitFx === 'player' ? 'brightness(3) drop-shadow(0 0 10px #f87171)' : 'drop-shadow(0 0 8px rgba(74,222,128,0.35))',
               transition: 'filter 0.15s',
-              animation: hasAnimatedSprite(evolutionStage) ? undefined : 'dungeon-idle 1.3s ease-in-out infinite',
+              animation: 'dungeon-idle 1.3s ease-in-out infinite',
             }}
           />
 

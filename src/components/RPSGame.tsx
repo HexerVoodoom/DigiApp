@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { getSpriteForStage, hasAnimatedSprite } from '../utils/sprites';
+import { getSpriteForStage } from '../utils/sprites';
 import { playTaskComplete, playDegenerate, playFeed } from '../utils/sounds';
 import { RPS_ROOKIE_DROPS } from '../utils/shop';
 import type { Language } from '../utils/i18n';
@@ -104,7 +104,7 @@ export function RPSGame({ evolutionStage, language, onEarnPoints, onItemDrop, on
       {/* Arena */}
       <div style={{ flex: 1, margin: 16, borderRadius: 12, border: '1px solid #2c3a52', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
         <img src={getSpriteForStage(evolutionStage)} alt="pet"
-             style={{ width: 88, height: 88, objectFit: 'contain', imageRendering: 'pixelated', animation: hasAnimatedSprite(evolutionStage) ? undefined : 'dungeon-idle 1.4s ease-in-out infinite' }} />
+             style={{ width: 88, height: 88, objectFit: 'contain', imageRendering: 'pixelated', animation: 'dungeon-idle 1.4s ease-in-out infinite' }} />
         <div style={{ fontSize: '2.6rem', minHeight: 52, lineHeight: 1 }}>
           {thinking ? '💭' : petHand !== null ? HANDS[petHand] : ''}
         </div>
