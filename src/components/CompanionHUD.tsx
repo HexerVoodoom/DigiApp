@@ -389,9 +389,7 @@ export const CompanionHUD = memo(function CompanionHUD({
   };
 
   // Get squash/stretch scale (10% total variation: 90% to 100%)
-  // Triceramon exclusively skips this bounce — sprite request from the owner.
   const getSquashScale = () => {
-    if (evolutionStage === 'triceramon') return 1.0;
     return squashFrame === 0 ? 0.9 : 1.0; // 90% or 100% of original height
   };
 
