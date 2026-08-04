@@ -25,7 +25,7 @@ object WidgetRenderer {
         val branchType = prefs.getString("branch_type", "data") ?: "data"
 
         val views = RemoteViews(context.packageName, layoutId)
-        setSprite(views, resolveSprite(context, currentStage, eggType, branchType), currentStage)
+        setSprite(views, resolveSprite(context, currentStage, eggType, branchType))
         views.setTextViewText(R.id.widget_digimon_name, digimonName)
         views.setTextViewText(R.id.widget_stage, stageLabel(currentStage))
         views.setTextViewText(R.id.widget_tasks, if (totalTasks > 0) "$completedTasks/$totalTasks" else "—")
@@ -43,21 +43,16 @@ object WidgetRenderer {
         val hasPoop = prefs.getBoolean("has_poop", false)
 
         val views = RemoteViews(context.packageName, layoutId)
-        setSprite(views, resolveSprite(context, currentStage, eggType, branchType), currentStage)
+        setSprite(views, resolveSprite(context, currentStage, eggType, branchType))
         views.setViewVisibility(R.id.widget_poop, if (hasPoop) View.VISIBLE else View.GONE)
         attachClick(context, views)
         mgr.updateAppWidget(appWidgetId, views)
     }
 
     // Both ViewFlipper frames use the same sprite (frame 2 is offset in XML for the bounce).
-    // Triceramon exclusively skips the bounce: zeroing frame 2's padding makes
-    // both frames render identically, so the ViewFlipper's flip is invisible.
-    private fun setSprite(views: RemoteViews, spriteId: Int, stage: String) {
+    private fun setSprite(views: RemoteViews, spriteId: Int) {
         views.setImageViewResource(R.id.widget_sprite, spriteId)
         views.setImageViewResource(R.id.widget_sprite_2, spriteId)
-        if (stage == "triceramon") {
-            views.setViewPadding(R.id.widget_sprite_2, 0, 0, 0, 0)
-        }
     }
 
     private val CHAT_PHRASE_SLOTS = intArrayOf(
@@ -90,7 +85,7 @@ object WidgetRenderer {
         val hp = prefs.getInt("hp", 100)
 
         val views = RemoteViews(context.packageName, layoutId)
-        setSprite(views, resolveSprite(context, currentStage, eggType, branchType), currentStage)
+        setSprite(views, resolveSprite(context, currentStage, eggType, branchType))
         views.setTextViewText(R.id.widget_digimon_name, digimonName)
         views.setTextViewText(R.id.widget_tasks, if (total > 0) "$completed/$total" else "—")
 
@@ -138,7 +133,7 @@ object WidgetRenderer {
         val energy = prefs.getInt("energy_points", 0).coerceIn(0, maxH)
 
         val views = RemoteViews(context.packageName, layoutId)
-        setSprite(views, resolveSprite(context, currentStage, eggType, branchType), currentStage)
+        setSprite(views, resolveSprite(context, currentStage, eggType, branchType))
 
         // Hearts: red = current health, dark = empty; hide slots beyond maxHealth.
         for (i in SCREEN_HEART_IDS.indices) {
