@@ -8,19 +8,16 @@ import digiEggSprite from 'figma:asset/6479b687e03b8292ee02a4453bff2eb1a76cfecb.
 import pichimonSprite from 'figma:asset/99ff747d7f7ecc2424e131a43c54669bcba9a301.png';
 import pukamonSprite from 'figma:asset/104dc13e2c146bb51e00903d6eaa5f6fae7619c6.png';
 import tapirmonSprite from 'figma:asset/8deb0c4ab0625c36e8f7d8484d047391e366e6cd.png';
+import tuskmonSprite from 'figma:asset/4545c1113c2742541bfa287e8aaad34d540d5188.png';
 import gigadramonSprite from 'figma:asset/61935125c675c3d79b74bdfbb783563de187250a.png';
+import gaioumonSprite from 'figma:asset/797dcc096094cec27969dafb7d0d37cddbe6a1d5.png';
+import monochromon from 'figma:asset/58d45f952e9e7f056445aa37544fa488bbfda16f.png';
 import triceramonSprite from 'figma:asset/439ea88abadb584d8abd075df0fff253301f3fcf.png';
 import ultimateBrachiomon from 'figma:asset/66717674e9ddce8b8e301126dbc9422279967bda.png';
+import bakemonSprite from 'figma:asset/cc04120f94ce0a4ae081b26d2359ca0dd7488f6d.png';
+import digitamamonSprite from 'figma:asset/15b86f9a6a117217f92fc8c35383b8ba7a68d995.png';
+import titamonSprite from 'figma:asset/2289f0ba6bd5182e66b3253be305d6860dbe1148.png';
 import gaioumonIttoSprite from 'figma:asset/2f5fefb3d68da3d20ef1d5195a8f0ddc506b1149.png';
-// Estas 6 formas também existem como GIF animado (src/assets/dmc_gif/) e são
-// mostradas ao vivo pelo pet via getSpriteForStage — sincronizado aqui pra
-// prévia da árvore de evolução bater com o sprite real.
-import tuskmonSprite from '../assets/dmc_gif/tuskmon_dmc.gif';
-import gaioumonSprite from '../assets/dmc_gif/gaioumon_dmc.gif';
-import monochromon from '../assets/dmc_gif/monochromon_dmc.gif';
-import bakemonSprite from '../assets/dmc_gif/bakemon_dmc.gif';
-import digitamamonSprite from '../assets/dmc_gif/digitamamon_dmc.gif';
-import titamonSprite from '../assets/dmc_gif/titamon_dmc.gif';
 
 // VEEMON LINE sprites (Blue Egg)
 import chicomonSprite from 'figma:asset/4d2fa6b5f39afed1e868edf4c8faf3c4888ecc84.png';
