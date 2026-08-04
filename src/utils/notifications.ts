@@ -50,13 +50,20 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 };
 
+// `image` isn't in TS's NotificationOptions (lib.dom.d.ts predates it), but
+// registration.showNotification() supports it (Chrome desktop/Android) as a
+// large picture in the notification body — used to show the pet's own sprite.
+export interface DigiNotificationOptions extends NotificationOptions {
+  image?: string;
+}
+
 // Show a notification — prefers SW showNotification (works in background),
 // falls back to new Notification() when SW is not yet active.
-export const showNotification = (title: string, options?: NotificationOptions): void => {
+export const showNotification = (title: string, options?: DigiNotificationOptions): void => {
   if (!('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
 
-  const opts: NotificationOptions = {
+  const opts: DigiNotificationOptions = {
     icon: '/favicon-192x192.png',
     badge: '/favicon-192x192.png',
     requireInteraction: false,
@@ -344,7 +351,8 @@ export const unregisterFromPushNotifications = async (): Promise<void> => {
 
 export const checkAndShowNotifications = (
   userName = 'Trainer',
-  language: 'pt-BR' | 'en-US' = 'en-US'
+  language: 'pt-BR' | 'en-US' = 'en-US',
+  petIcon?: string,
 ) => {
   if (Notification.permission !== 'granted') return;
 
@@ -362,7 +370,7 @@ export const checkAndShowNotifications = (
       ? `Olá ${userName}! Não se esqueça de checar suas atividades hoje! 💪`
       : `Hi ${userName}! Don't forget to check your activities today! 💪`;
 
-    showNotification(title, { body, tag: 'daily-reminder' });
+    showNotification(title, { body, tag: 'daily-reminder', icon: petIcon, image: petIcon });
     localStorage.setItem(DAILY_CHECK_KEY, today);
   }
 
@@ -373,7 +381,7 @@ export const checkAndShowNotifications = (
     scheduled
       .filter(n => n.scheduledTime === currentTime)
       .forEach(n => {
-        showNotification(n.title, { body: n.body, tag: n.id });
+        showNotification(n.title, { body: n.body, tag: n.id, icon: petIcon, image: petIcon });
       });
   }
 };

@@ -141,8 +141,11 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/favicon-192x192.png',
+      icon: data.icon || '/favicon-192x192.png',
       badge: '/favicon-192x192.png',
+      // `image` renders a large picture in the notification body (Chrome desktop
+      // + Android) — the pet's own sprite, sent by workers/push-scheduler.js.
+      image: data.image,
       tag: data.tag,
       renotify: false,
       data: { url: '/' },
