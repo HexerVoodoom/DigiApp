@@ -99,7 +99,6 @@ import patamonGif from '../assets/dmc_gif/patamon_dmc.gif';
 import piyomonGif from '../assets/dmc_gif/piyomon_dmc.gif';
 import seadramonGif from '../assets/dmc_gif/seadramon_dmc.gif';
 import titamonGif from '../assets/dmc_gif/titamon_dmc.gif';
-import triceramonGif from '../assets/dmc_gif/triceramon_dmc.gif';
 import tuskmonGif from '../assets/dmc_gif/tuskmon_dmc.gif';
 import vademonGif from '../assets/dmc_gif/vademon_dmc.gif';
 
@@ -208,7 +207,6 @@ export const STAGE_SPRITE_GIFS: Record<string, string> = {
   piyomon: piyomonGif,
   seadramon: seadramonGif,
   titamon: titamonGif,
-  triceramon: triceramonGif,
   tuskmon: tuskmonGif,
   vademon: vademonGif,
 };
