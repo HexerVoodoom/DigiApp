@@ -21,7 +21,8 @@ class DigiAlarmPlugin : Plugin() {
         val title = call.getString("title") ?: "DigiApp"
         val body = call.getString("body") ?: ""
         val scheduledTime = call.getString("scheduledTime") ?: run { call.reject("Missing scheduledTime"); return }
-        scheduleAlarmInternal(context, id, title, body, scheduledTime)
+        val widgetReset = call.getBoolean("widgetReset") ?: false
+        scheduleAlarmInternal(context, id, title, body, scheduledTime, widgetReset)
         call.resolve()
     }
 
@@ -35,7 +36,7 @@ class DigiAlarmPlugin : Plugin() {
     companion object {
         private const val PREFS_NAME = "DigiAppAlarms"
 
-        fun scheduleAlarmInternal(context: Context, id: String, title: String, body: String, scheduledTime: String) {
+        fun scheduleAlarmInternal(context: Context, id: String, title: String, body: String, scheduledTime: String, widgetReset: Boolean = false) {
             val parts = scheduledTime.split(":")
             if (parts.size != 2) return
             val hour = parts[0].toIntOrNull() ?: return
@@ -57,6 +58,7 @@ class DigiAlarmPlugin : Plugin() {
                 putExtra(AlarmReceiver.EXTRA_TITLE, title)
                 putExtra(AlarmReceiver.EXTRA_BODY, body)
                 putExtra(AlarmReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+                putExtra(AlarmReceiver.EXTRA_WIDGET_RESET, widgetReset)
             }
             val pendingIntent = PendingIntent.getBroadcast(
                 context, notificationId, intent,
@@ -71,6 +73,7 @@ class DigiAlarmPlugin : Plugin() {
                 put("title", title)
                 put("body", body)
                 put("scheduledTime", scheduledTime)
+                put("widgetReset", widgetReset)
             }
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putString("alarm_$notificationId", alarm.toString()).apply()
@@ -104,7 +107,8 @@ class DigiAlarmPlugin : Plugin() {
                         alarm.getString("id"),
                         alarm.optString("title", "DigiApp"),
                         alarm.optString("body", ""),
-                        alarm.getString("scheduledTime")
+                        alarm.getString("scheduledTime"),
+                        alarm.optBoolean("widgetReset", false)
                     )
                 } catch (_: Exception) { /* skip malformed entries */ }
             }

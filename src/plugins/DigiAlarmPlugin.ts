@@ -1,7 +1,7 @@
 import { registerPlugin } from '@capacitor/core';
 
 export interface DigiAlarmPlugin {
-  scheduleAlarm(options: { id: string; title: string; body: string; scheduledTime: string }): Promise<void>;
+  scheduleAlarm(options: { id: string; title: string; body: string; scheduledTime: string; widgetReset?: boolean }): Promise<void>;
   cancelAlarm(options: { id: string }): Promise<void>;
 }
 

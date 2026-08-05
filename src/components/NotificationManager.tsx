@@ -197,6 +197,16 @@ export function NotificationManager({
         body: ispt ? 'Durma bem! Até amanhã! 😴' : 'Sleep well! See you tomorrow! 😴',
         scheduledTime: '22:00',
       }).catch(() => {});
+
+      // Zera o contador de tarefas do widget na virada do dia (00:01), mesmo com o app fechado.
+      // Silencioso (sem notificação) — o receiver nativo já se re-agenda pro dia seguinte sozinho.
+      DigiAlarm.scheduleAlarm({
+        id: 'widget-daily-reset',
+        title: '',
+        body: '',
+        scheduledTime: '00:01',
+        widgetReset: true,
+      }).catch(() => {});
     }
 
     // Web/PWA: poll every minute and fire when the clock hits the target hour
