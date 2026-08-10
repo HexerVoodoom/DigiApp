@@ -354,7 +354,11 @@ export const checkAndShowNotifications = (
   language: 'pt-BR' | 'en-US' = 'en-US',
   petIcon?: string,
 ) => {
-  if (Notification.permission !== 'granted') return;
+  // Native Android WebView has no `Notification` global at all (see
+  // requestNotificationPermission above) — this is called unconditionally
+  // from NotificationManager's effect, so without this guard it throws a
+  // ReferenceError that crashes the whole app (caught by ErrorBoundary).
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   const now = new Date();
   const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
