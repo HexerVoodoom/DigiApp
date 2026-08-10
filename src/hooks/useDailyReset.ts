@@ -15,6 +15,20 @@ interface Activity {
 }
 interface Task { id: string; completed: boolean; steps?: Step[]; }
 
+// Snapshot of "yesterday"'s completion, frozen the moment the day turns.
+// Kept on GameState (pendingActivityCheck) until the player confirms whether
+// they actually did the activities but forgot to check them off — only ever
+// refers to the single day immediately before the check, never older ones.
+export interface PendingActivityCheck {
+  date: string;
+  dailyDone: number;
+  totalTasks: number;
+  dailyGoal: number;
+  requiredToday: number;
+  heartsLost: number;
+  energyWasFull: boolean;
+}
+
 interface ResetGameState {
   activities: Activity[];
   tasks: Task[];
@@ -37,6 +51,10 @@ interface ResetGameState {
   poopEventsCompleted: number[];
   equippedEvoItem?: string | null;
   guardianHeartCharge?: number;
+  pendingActivityCheck?: PendingActivityCheck | null;
+  evolutionLocked?: boolean;
+  totalPerfectDays?: number;
+  foodInventory?: Record<string, number>;
 }
 
 type Attr = 'virus' | 'data' | 'vaccine';
@@ -95,6 +113,209 @@ function getDegeneratedStage(stage: string, eggType: EggLine | undefined, curren
   }
 }
 
+// Pure computation of "yesterday"'s completion stats — no state mutation.
+// Always evaluates the single calendar day immediately before "now", exactly
+// like before: if the app wasn't opened for several days, only the most
+// recent one is ever assessed.
+function computeYesterdayStats(prev: ResetGameState): PendingActivityCheck {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayString = yesterday.toDateString();
+  const yesterdayWeekDay = yesterday.getDay();
+
+  const currentLevel = getStageLevel(prev.evolutionStage);
+  const requirements = FORM_REQUIREMENTS[currentLevel];
+  const requiredToday = requirements.required;
+
+  let dailyDone = 0;
+  const availableActivities = !canSelectWeekdays(prev.evolutionStage)
+    ? prev.activities
+    : prev.activities.filter((a: Activity) => a.weekDays?.includes(yesterdayWeekDay));
+
+  availableActivities.forEach((activity: Activity) => {
+    let isComplete = false;
+    if (activity.steps.length > 0) {
+      isComplete = activity.steps.every(s => s.completed);
+    } else {
+      isComplete = !!activity.completedToday && activity.lastCompletedDate === yesterdayString;
+    }
+    if (isComplete) dailyDone++;
+  });
+
+  dailyDone += prev.tasks.filter((t: Task) => t.completed).length;
+
+  // Daily goal = min(registered, stage requirement) — finishing everything you
+  // registered counts, and the stage requirement is the ceiling.
+  const totalTasks = availableActivities.length + prev.tasks.length;
+  const dailyGoal = Math.min(totalTasks, requiredToday);
+  const energyWasFull = (prev.energyPoints ?? 0) >= requiredToday;
+
+  const completionRatio = dailyGoal > 0 ? Math.min(1, dailyDone / dailyGoal) : 1;
+  const heartsLost = Math.floor((1 - completionRatio) * prev.maxHealthPoints);
+
+  return { date: yesterdayString, dailyDone, totalTasks, dailyGoal, requiredToday, heartsLost, energyWasFull };
+}
+
+interface PopupHandlers {
+  hasShownRookiePopup: boolean;
+  setShowRookieUnlockPopup: (v: boolean) => void;
+  setHasShownRookiePopup: (v: boolean) => void;
+}
+
+// Applies the consequences of a day's outcome (HP loss, perfect-day streak,
+// evolution, HP-0 degeneration, 💚 Coração Verde) on top of `prev`, given a
+// frozen stats snapshot. When `confirmed` is true (player confirmed they DID
+// do yesterday's activities, just forgot to check them off) the day is
+// treated as if the daily goal had been met — no heart loss, and it can still
+// count as perfect if energy was also full that day.
+function applyDayOutcome(
+  prev: ResetGameState,
+  stats: PendingActivityCheck,
+  confirmed: boolean,
+  { hasShownRookiePopup, setShowRookieUnlockPopup, setHasShownRookiePopup }: PopupHandlers,
+) {
+  const { requiredToday, dailyGoal, totalTasks, energyWasFull } = stats;
+  const dailyDone = confirmed ? Math.max(stats.dailyDone, dailyGoal) : stats.dailyDone;
+  const requirements = FORM_REQUIREMENTS[getStageLevel(prev.evolutionStage)];
+
+  const dayWasPerfect = totalTasks > 0 && dailyDone >= dailyGoal && energyWasFull;
+
+  let newHP = prev.healthPoints;
+  let newPerfectDays = prev.perfectDays;
+  let newEvolutionStage = prev.evolutionStage;
+  let finalUnlockedEvolutions = [...prev.unlockedEvolutions];
+  let wasDegeneratedByHP = false;
+  let guardianHeartUsed = false;
+  let newGuardianHeartCharge = prev.guardianHeartCharge ?? 0;
+  let usedEvoItem = false;
+  let newMaxActivityCap = prev.maxActivityCap;
+  let newCurrentBranch = prev.currentBranch as 'virus' | 'data' | 'vaccine';
+  let newRecentAttrs = {
+    virus: prev.attributesSinceLastEvolution?.virus ?? 0,
+    data: prev.attributesSinceLastEvolution?.data ?? 0,
+    vaccine: prev.attributesSinceLastEvolution?.vaccine ?? 0,
+  };
+
+  // HP penalty: proportional to the tasks NOT done, measured against the
+  // same daily goal. A confirmed "I actually did it" clears it to 0.
+  const completionRatio = dailyGoal > 0 ? Math.min(1, dailyDone / dailyGoal) : 1;
+  const heartsLost = Math.floor((1 - completionRatio) * prev.maxHealthPoints);
+  if (heartsLost > 0) {
+    newHP = Math.max(0, prev.healthPoints - heartsLost);
+  }
+
+  if (dayWasPerfect) {
+    newPerfectDays++;
+    newGuardianHeartCharge = Math.min(GUARDIAN_HEART_CHARGE_NEEDED, newGuardianHeartCharge + 1);
+  } else {
+    newPerfectDays = Math.max(0, prev.perfectDays - 1);
+  }
+
+  let returnedDigimentalEmoji: string | null = null;
+  if (!prev.evolutionLocked && newPerfectDays >= requirements.required) {
+    newPerfectDays = 0;
+
+    const recentV = newRecentAttrs.virus;
+    const recentD = newRecentAttrs.data;
+    const recentVac = newRecentAttrs.vaccine;
+    const dominantAttr = Math.max(recentV, recentD, recentVac);
+    let branch = prev.currentBranch as 'virus' | 'data' | 'vaccine';
+    if (dominantAttr > 0) {
+      if (recentV === dominantAttr) branch = 'virus';
+      else if (recentD === dominantAttr) branch = 'data';
+      else branch = 'vaccine';
+    }
+    newCurrentBranch = branch;
+
+    newRecentAttrs = { virus: 0, data: 0, vaccine: 0 };
+
+    const isBabyII = ['pukamon', 'chibimon', 'nyaromon'].includes(prev.evolutionStage);
+    newEvolutionStage = getNextEvolution(
+      prev.evolutionStage,
+      prev.eggType ?? 'tapirmon',
+      branch,
+      prev.unlockedEvolutions,
+    );
+    const naturalNext = newEvolutionStage;
+    const evoItem = prev.equippedEvoItem ? EVO_ITEMS[prev.equippedEvoItem] : null;
+    if (evoItem?.evoTarget && getStageLevel(naturalNext) === evoItem.evoLevel && naturalNext !== prev.evolutionStage) {
+      newEvolutionStage = evoItem.evoTarget;
+      usedEvoItem = true;
+      if (evoItem.consumedOnEvolve === false && evoItem.inventoryEmoji) {
+        returnedDigimentalEmoji = evoItem.inventoryEmoji;
+      }
+    }
+    if (isBabyII && !hasShownRookiePopup) {
+      setShowRookieUnlockPopup(true);
+      setHasShownRookiePopup(true);
+      localStorage.setItem(STORAGE_KEYS.ROOKIE_POPUP_SHOWN, 'true');
+    }
+
+    const newStageLevel = getStageLevel(newEvolutionStage);
+    newHP = MAX_HP_BY_FORM[newStageLevel];
+    const newCap = FORM_REQUIREMENTS[newStageLevel].cap;
+    if (newCap > newMaxActivityCap) newMaxActivityCap = newCap;
+
+    if (!finalUnlockedEvolutions.includes(naturalNext)) {
+      finalUnlockedEvolutions.push(naturalNext);
+    }
+  }
+
+  if (newHP === 0) {
+    if (newGuardianHeartCharge >= GUARDIAN_HEART_CHARGE_NEEDED) {
+      guardianHeartUsed = true;
+      newGuardianHeartCharge = 0;
+      newHP = 1;
+    } else {
+      wasDegeneratedByHP = true;
+      newEvolutionStage = getDegeneratedStage(prev.evolutionStage, prev.eggType, newCurrentBranch);
+
+      const degeneratedLevel = getStageLevel(newEvolutionStage);
+      newHP = MAX_HP_BY_FORM[degeneratedLevel];
+      newPerfectDays = Math.floor(FORM_REQUIREMENTS[degeneratedLevel].required / 2);
+      newRecentAttrs = { virus: 0, data: 0, vaccine: 0 };
+    }
+  }
+
+  const finalStageLevel = getStageLevel(newEvolutionStage);
+  const newMaxHP = MAX_HP_BY_FORM[finalStageLevel];
+
+  return {
+    healthPoints: newHP,
+    maxHealthPoints: newMaxHP,
+    perfectDays: newPerfectDays,
+    evolutionStage: newEvolutionStage,
+    currentBranch: newCurrentBranch,
+    unlockedEvolutions: finalUnlockedEvolutions,
+    degeneratedByHP: wasDegeneratedByHP,
+    guardianHeartCharge: newGuardianHeartCharge,
+    lastDayWasPerfect: dayWasPerfect,
+    totalPerfectDays: (prev.totalPerfectDays ?? 0) + (dayWasPerfect ? 1 : 0),
+    maxActivityCap: newMaxActivityCap,
+    attributesSinceLastEvolution: newRecentAttrs,
+    equippedEvoItem: usedEvoItem ? null : (prev.equippedEvoItem ?? null),
+    ...(returnedDigimentalEmoji && {
+      foodInventory: {
+        ...prev.foodInventory,
+        [returnedDigimentalEmoji]: (prev.foodInventory?.[returnedDigimentalEmoji] ?? 0) + 1,
+      },
+    }),
+    lastDayReport: {
+      date: stats.date,
+      done: dailyDone,
+      total: totalTasks,
+      required: dailyGoal,
+      heartsLost,
+      wasPerfect: dayWasPerfect,
+      energyWasFull,
+      perfectDays: newPerfectDays,
+      degenerated: wasDegeneratedByHP,
+      guardianHeartUsed,
+      activityCheckConfirmed: confirmed && stats.heartsLost > 0 ? true : undefined,
+    },
+  };
+}
+
 interface UseDailyResetProps {
   gameState: ResetGameState;
   setGameState: (fn: (prev: any) => any) => void;
@@ -110,231 +331,63 @@ export function useDailyReset({
   setShowRookieUnlockPopup,
   setHasShownRookiePopup,
 }: UseDailyResetProps) {
+  const popupHandlers = { hasShownRookiePopup, setShowRookieUnlockPopup, setHasShownRookiePopup };
+
   const performDailyReset = useCallback(() => {
     setGameState(prev => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayString = yesterday.toDateString();
-      const yesterdayWeekDay = yesterday.getDay();
-
-      const currentLevel = getStageLevel(prev.evolutionStage);
-      const requirements = FORM_REQUIREMENTS[currentLevel];
-      const requiredToday = requirements.required;
-
-      let dailyDone = 0;
-      const availableActivities = !canSelectWeekdays(prev.evolutionStage)
-        ? prev.activities
-        : prev.activities.filter((a: Activity) => a.weekDays?.includes(yesterdayWeekDay));
-
-      availableActivities.forEach((activity: Activity) => {
-        let isComplete = false;
-        if (activity.steps.length > 0) {
-          isComplete = activity.steps.every(s => s.completed);
-        } else {
-          isComplete = !!activity.completedToday && activity.lastCompletedDate === yesterdayString;
-        }
-        if (isComplete) dailyDone++;
-      });
-
-      dailyDone += prev.tasks.filter((t: Task) => t.completed).length;
-
-      // Daily goal = min(registered, stage requirement) — same rule as the HP
-      // penalty: finishing everything you registered counts, and the stage
-      // requirement is the ceiling.
-      const totalTasks = availableActivities.length + prev.tasks.length;
-      const dailyGoal = Math.min(totalTasks, requiredToday);
-
-      // A perfect day (evolution point) requires completing the daily goal
-      // (at least 1 task registered) AND full energy at the end of the day.
-      // Energy bars = the stage's task requirement (requiredToday).
-      const energyWasFull = (prev.energyPoints ?? 0) >= requiredToday;
-      const dayWasPerfect = totalTasks > 0 && dailyDone >= dailyGoal && energyWasFull;
-
-      let newHP = prev.healthPoints;
-      let newPerfectDays = prev.perfectDays;
-      let newEvolutionStage = prev.evolutionStage;
-      let finalUnlockedEvolutions = [...prev.unlockedEvolutions];
-      let wasDegeneratedByHP = false;
-      let guardianHeartUsed = false;
-      let newGuardianHeartCharge = prev.guardianHeartCharge ?? 0;
-      let usedEvoItem = false;
-      let newMaxActivityCap = prev.maxActivityCap;
-      let newCurrentBranch = prev.currentBranch as 'virus' | 'data' | 'vaccine';
-      let newRecentAttrs = {
-        virus: prev.attributesSinceLastEvolution?.virus ?? 0,
-        data: prev.attributesSinceLastEvolution?.data ?? 0,
-        vaccine: prev.attributesSinceLastEvolution?.vaccine ?? 0,
-      };
-
-      // HP penalty: proportional to the tasks NOT done, measured against the
-      // same daily goal. Meeting it = safe; registering MORE than required
-      // never adds risk. No tasks registered → nothing to fail.
-      const completionRatio = dailyGoal > 0 ? Math.min(1, dailyDone / dailyGoal) : 1;
-      const heartsLost = Math.floor((1 - completionRatio) * prev.maxHealthPoints);
-      if (heartsLost > 0) {
-        newHP = Math.max(0, prev.healthPoints - heartsLost);
-      }
-
-      // (Poop no longer penalizes at the day turn — uncleaned poop drains 1 heart
-      // every 6 hours while it's on screen; handled live in App.tsx.)
-
-      if (dayWasPerfect) {
-        newPerfectDays++;
-        // Version B: attribute points come from feeding, not from daily reset.
-        // newRecentAttrs carries whatever was accumulated via handleFeed during the day.
-        // 💚 Coração Verde: charges +1 per perfect day, independent of the
-        // evolution counter above and never decays on a bad day — it's a slow
-        // safety net, not a streak.
-        newGuardianHeartCharge = Math.min(GUARDIAN_HEART_CHARGE_NEEDED, newGuardianHeartCharge + 1);
-      } else {
-        // Streak break: any non-perfect day loses one day of accumulated progress
-        newPerfectDays = Math.max(0, prev.perfectDays - 1);
-      }
-
-      // Evolution check. The padlock on the Evolution page blocks it entirely:
-      // perfect days keep accumulating, and unlocking makes the pet evolve on
-      // the NEXT day turn (this same check passes then).
-      let returnedDigimentalEmoji: string | null = null;
-      if (!prev.evolutionLocked && newPerfectDays >= requirements.required) {
-        newPerfectDays = 0;
-
-        // Use attributes accumulated since the last evolution for branch — not the
-        // cumulative all-time total, so the player's current habits still matter.
-        const recentV = newRecentAttrs.virus;
-        const recentD = newRecentAttrs.data;
-        const recentVac = newRecentAttrs.vaccine;
-        const dominantAttr = Math.max(recentV, recentD, recentVac);
-        let branch = prev.currentBranch as 'virus' | 'data' | 'vaccine';
-        if (dominantAttr > 0) {
-          if (recentV === dominantAttr) branch = 'virus';
-          else if (recentD === dominantAttr) branch = 'data';
-          else branch = 'vaccine';
-        }
-        newCurrentBranch = branch;
-
-        // Reset the recent window after each evolution
-        newRecentAttrs = { virus: 0, data: 0, vaccine: 0 };
-
-        const isBabyII = ['pukamon', 'chibimon', 'nyaromon'].includes(prev.evolutionStage);
-        newEvolutionStage = getNextEvolution(
-          prev.evolutionStage,
-          prev.eggType ?? 'tapirmon',
-          branch,
-          prev.unlockedEvolutions,
-        );
-        // Item digivolution (shop): when criteria are met AND an item is
-        // equipped for this level, the item form REPLACES the branch form.
-        // The natural form is still unlocked (tree/mega logic stays coherent);
-        // degeneration later returns to the branch form, never the item form.
-        const naturalNext = newEvolutionStage;
-        const evoItem = prev.equippedEvoItem ? EVO_ITEMS[prev.equippedEvoItem] : null;
-        if (evoItem?.evoTarget && getStageLevel(naturalNext) === evoItem.evoLevel && naturalNext !== prev.evolutionStage) {
-          newEvolutionStage = evoItem.evoTarget;
-          usedEvoItem = true;
-          // Digimentals are never consumed — return them to the Items folder.
-          if (evoItem.consumedOnEvolve === false && evoItem.inventoryEmoji) {
-            returnedDigimentalEmoji = evoItem.inventoryEmoji;
-          }
-        }
-        if (isBabyII && !hasShownRookiePopup) {
-          setShowRookieUnlockPopup(true);
-          setHasShownRookiePopup(true);
-          localStorage.setItem(STORAGE_KEYS.ROOKIE_POPUP_SHOWN, 'true');
-        }
-
-        const newStageLevel = getStageLevel(newEvolutionStage);
-        newHP = MAX_HP_BY_FORM[newStageLevel];
-        const newCap = FORM_REQUIREMENTS[newStageLevel].cap;
-        if (newCap > newMaxActivityCap) newMaxActivityCap = newCap;
-
-        if (!finalUnlockedEvolutions.includes(naturalNext)) {
-          finalUnlockedEvolutions.push(naturalNext);
-        }
-      }
-
-      // Degeneration by HP — 💚 Coração Verde guardrail: if fully charged (5
-      // perfect days), it absorbs the hit instead of letting the Digimon
-      // degenerate. The pet survives at 1 HP (still shaken, not risk-free) and
-      // the shield is consumed, needing another 5 perfect days to recharge.
-      if (newHP === 0) {
-        if (newGuardianHeartCharge >= GUARDIAN_HEART_CHARGE_NEEDED) {
-          guardianHeartUsed = true;
-          newGuardianHeartCharge = 0;
-          newHP = 1;
-        } else {
-          wasDegeneratedByHP = true;
-          newEvolutionStage = getDegeneratedStage(prev.evolutionStage, prev.eggType, newCurrentBranch);
-
-          const degeneratedLevel = getStageLevel(newEvolutionStage);
-          newHP = MAX_HP_BY_FORM[degeneratedLevel];
-          // Recovery discount: climbing back to the stage you fell from costs half
-          // the perfect days (head start at floor(required/2)). Non-cumulative — it's
-          // always half of the *new* (lower) stage's requirement, so a second
-          // degeneration gets the same discount again, never a smaller one.
-          newPerfectDays = Math.floor(FORM_REQUIREMENTS[degeneratedLevel].required / 2);
-          // Also reset recent branch window after forced degen
-          newRecentAttrs = { virus: 0, data: 0, vaccine: 0 };
-        }
-      }
-
+      // Mechanical reset — always happens on the calendar day turn, whether
+      // or not yesterday's outcome is still awaiting confirmation.
       const resetActivities = prev.activities.map((activity: Activity) => ({
         ...activity,
         steps: activity.steps.map(step => ({ ...step, completed: false })),
         completedToday: false,
       }));
-
       const resetTasks = prev.tasks.map((task: Task) => ({ ...task, completed: false }));
-
-      const finalStageLevel = getStageLevel(newEvolutionStage);
-      const newMaxHP = MAX_HP_BY_FORM[finalStageLevel];
-
-      return {
-        ...prev,
+      const mechanical = {
         activities: resetActivities,
         tasks: resetTasks,
-        healthPoints: newHP,
-        maxHealthPoints: newMaxHP,
-        perfectDays: newPerfectDays,
         lastResetDate: new Date().toDateString(),
-        evolutionStage: newEvolutionStage,
         digivolutionSegments: 0,
         digivolutionSegmentsNeeded: 999,
         poopEventsScheduled: [],
         poopEventsCompleted: [],
         poopEventsShown: [],
         poopPenaltyClockAt: 0,
-        currentBranch: newCurrentBranch,
-        unlockedEvolutions: finalUnlockedEvolutions,
-        degeneratedByHP: wasDegeneratedByHP,
-        guardianHeartCharge: newGuardianHeartCharge,
-        lastDayWasPerfect: dayWasPerfect,
-        // Lifetime perfect-day counter (missions) — never resets on evolution
-        totalPerfectDays: (prev.totalPerfectDays ?? 0) + (dayWasPerfect ? 1 : 0),
-        maxActivityCap: newMaxActivityCap,
-        attributesSinceLastEvolution: newRecentAttrs,
-        equippedEvoItem: usedEvoItem ? null : (prev.equippedEvoItem ?? null),
-        ...(returnedDigimentalEmoji && {
-          foodInventory: {
-            ...prev.foodInventory,
-            [returnedDigimentalEmoji]: (prev.foodInventory?.[returnedDigimentalEmoji] ?? 0) + 1,
-          },
-        }),
-        energyPoints: 0, // Energy resets daily (refills by feeding)
-        // Summary of yesterday, shown once as a "daily report" on next open.
-        lastDayReport: {
-          date: yesterdayString,
-          done: dailyDone,
-          total: totalTasks,
-          required: dailyGoal, // the effective goal: min(registered, stage requirement)
-          heartsLost,
-          wasPerfect: dayWasPerfect,
-          energyWasFull,
-          perfectDays: newPerfectDays,
-          degenerated: wasDegeneratedByHP,
-          guardianHeartUsed,
-        },
+        energyPoints: 0,
       };
+
+      // A pending "did you do yesterday's activities?" check only ever covers
+      // the single day right before it was raised. If the player didn't
+      // answer before ANOTHER day turn happened, that window is gone — settle
+      // it now as "not confirmed" (the originally computed penalty applies)
+      // before evaluating the new "yesterday".
+      let base: ResetGameState = prev;
+      if (prev.pendingActivityCheck) {
+        base = { ...prev, ...applyDayOutcome(prev, prev.pendingActivityCheck, false, popupHandlers) };
+      }
+
+      const stats = computeYesterdayStats(base);
+
+      if (stats.heartsLost > 0) {
+        return { ...base, ...mechanical, pendingActivityCheck: stats };
+      }
+
+      const outcome = applyDayOutcome(base, stats, false, popupHandlers);
+      return { ...base, ...mechanical, ...outcome, pendingActivityCheck: null };
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasShownRookiePopup, setShowRookieUnlockPopup, setHasShownRookiePopup]);
+
+  // Answers the "did you do yesterday's activities?" modal: confirmed=true
+  // means the player says they actually did them (avoids the heart loss),
+  // confirmed=false accepts the originally computed penalty.
+  const confirmActivityCheck = useCallback((confirmed: boolean) => {
+    setGameState(prev => {
+      if (!prev.pendingActivityCheck) return prev;
+      const outcome = applyDayOutcome(prev, prev.pendingActivityCheck, confirmed, popupHandlers);
+      return { ...prev, ...outcome, pendingActivityCheck: null };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasShownRookiePopup, setShowRookieUnlockPopup, setHasShownRookiePopup]);
 
   // Day-rollover check. A 30s cadence is plenty (the reset just needs to land
@@ -351,4 +404,6 @@ export function useDailyReset({
     const interval = setInterval(checkRollover, 30000);
     return () => clearInterval(interval);
   }, [gameState.lastResetDate, performDailyReset]);
+
+  return { confirmActivityCheck };
 }

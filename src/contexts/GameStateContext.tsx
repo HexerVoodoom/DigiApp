@@ -135,7 +135,25 @@ export interface GameState {
     perfectDays: number;
     degenerated: boolean;
     guardianHeartUsed?: boolean;
+    /** True when hearts would've been lost but the player confirmed they actually did the activities. */
+    activityCheckConfirmed?: boolean;
   };
+  /**
+   * "Did you do yesterday's activities?" — set at the day turn ONLY when
+   * hearts would be lost, frozen until the player answers. Only ever refers
+   * to the single day immediately before the check (never older ones): if
+   * left unanswered, the next day turn auto-resolves it as "not confirmed"
+   * and moves on. See useDailyReset.ts.
+   */
+  pendingActivityCheck?: {
+    date: string;
+    dailyDone: number;
+    totalTasks: number;
+    dailyGoal: number;
+    requiredToday: number;
+    heartsLost: number;
+    energyWasFull: boolean;
+  } | null;
 }
 
 export function getMaxHPForStage(stage: GameState['evolutionStage']): number {
@@ -192,6 +210,7 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
         equippedBackground: loadedState.equippedBackground ?? null,
         equippedEvoItem: loadedState.equippedEvoItem ?? null,
         guardianHeartCharge: loadedState.guardianHeartCharge ?? 0,
+        pendingActivityCheck: loadedState.pendingActivityCheck ?? null,
       } as GameState;
     }
     const savedEggType = localStorage.getItem(STORAGE_KEYS.EGG_TYPE) as GameState['eggType'] | null;
@@ -229,6 +248,7 @@ export function GameStateProvider({ children }: { children: ReactNode }) {
       equippedBackground: null,
       equippedEvoItem: null,
       guardianHeartCharge: 0,
+      pendingActivityCheck: null,
     };
   });
 
