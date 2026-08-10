@@ -37,7 +37,9 @@ export function DailyReportModal({ report, onClose, language, theme = 'default' 
     },
   ];
 
-  const headline = report.guardianHeartUsed
+  const headline = report.activityCheckConfirmed
+    ? (isPt ? '✅ Confirmado — corações a salvo!' : '✅ Confirmed — hearts safe!')
+    : report.guardianHeartUsed
     ? (isPt ? '💚 O Coração Verde te protegeu!' : '💚 The Green Heart protected you!')
     : report.degenerated
     ? (isPt ? '💔 Seu Digimon regrediu...' : '💔 Your Digimon degenerated...')
@@ -93,6 +95,13 @@ export function DailyReportModal({ report, onClose, language, theme = 'default' 
               {isPt
                 ? 'Tarefas ok, mas a energia não estava cheia — alimente até encher antes do fim do dia para o dia perfeito!'
                 : 'Tasks done, but energy was not full — feed to full before the day ends for a perfect day!'}
+            </p>
+          )}
+          {report.activityCheckConfirmed && (
+            <p style={{ ...mono, fontSize: '0.7rem', color: '#16a34a', paddingTop: 6 }}>
+              {isPt
+                ? 'Você confirmou que fez as atividades de ontem — nenhum coração foi perdido.'
+                : "You confirmed you did yesterday's activities — no hearts were lost."}
             </p>
           )}
           {report.guardianHeartUsed && (

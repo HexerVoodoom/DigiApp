@@ -15,6 +15,7 @@ import { DigivolveTaskModal } from './components/DigivolveTaskModal';
 import { ContentModals } from './components/ContentModals';
 import { NotificationManager } from './components/NotificationManager';
 import { DailyReportModal } from './components/DailyReportModal';
+import { ActivityConfirmModal } from './components/ActivityConfirmModal';
 import { ItemsWindow } from './components/ItemsWindow';
 import { HelpModal } from './components/HelpModal';
 import { Plus, Edit2 } from 'lucide-react';
@@ -178,7 +179,7 @@ export default function App() {
     isSleeping,
   });
 
-  useDailyReset({
+  const { confirmActivityCheck } = useDailyReset({
     gameState,
     setGameState,
     hasShownRookiePopup,
@@ -1873,7 +1874,15 @@ export default function App() {
           stage: getStageLevel(gameState.evolutionStage),
         }}
       />
-      {showDailyReport && gameState.lastDayReport && (
+      {gameState.pendingActivityCheck && (
+        <ActivityConfirmModal
+          pending={gameState.pendingActivityCheck}
+          onConfirm={confirmActivityCheck}
+          language={language}
+          theme={theme}
+        />
+      )}
+      {!gameState.pendingActivityCheck && showDailyReport && gameState.lastDayReport && (
         <DailyReportModal
           report={gameState.lastDayReport}
           onClose={handleCloseDailyReport}

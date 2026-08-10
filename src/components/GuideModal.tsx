@@ -200,6 +200,17 @@ export function GuideModal({ isOpen, onClose, theme = 'default' }: GuideModalPro
               your Digimon survives with 1 heart — and the shield resets to 0,
               needing another 5 perfect days to recharge.
             </p>
+            <p className="mt-2">
+              <strong>🤔 "Did you do yesterday's activities?":</strong> if hearts
+              would be lost at the day turn, you get asked to confirm before the
+              loss applies — in case you actually did the activities but forgot
+              to open the app and check them off. Answering "Yes" clears the
+              heart loss for that day (it can even still count as perfect, if
+              your energy was also full). This only ever covers the single day
+              right before the check: if you don't answer before another day
+              turns over, it's settled as "not confirmed" and the next day's
+              check (if any) starts fresh.
+            </p>
           </section>
 
           <section>

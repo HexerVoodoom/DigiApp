@@ -21,6 +21,13 @@ const SECTIONS = [
         descPt: 'A saúde do seu Digimon. Na virada do dia você perde corações pelo que faltou em relação ao requisito do estágio; cocô não limpo tira 1 coração a cada 6h. Recupera esfregando (máx. 1 coração/dia) ou usando um Coraçãozinho (loja / drop da masmorra). Chega a 0 → degeneração (você mantém metade dos dias perfeitos de vantagem para voltar; não acumula) — a menos que o escudo 💚 Coração Verde esteja carregado, veja abaixo.',
       },
       {
+        icon: '🤔',
+        labelEn: "Did you do it yesterday?",
+        labelPt: 'Você fez ontem?',
+        descEn: 'If hearts would be lost at the day turn, you\'re asked to confirm before the loss applies — for when you actually did the activities but forgot to open the app to check them off. Answering "Yes" clears the heart loss for that day. Only covers the single day right before the check; left unanswered, it settles as "not confirmed" once another day turns over.',
+        descPt: 'Se corações forem ser perdidos na virada do dia, você é perguntado antes de aplicar a perda — para quando você fez as atividades de verdade mas esqueceu de abrir o app para marcar. Responder "Sim" zera a perda de corações daquele dia. Vale só para o dia imediatamente anterior; se não responder até a próxima virada, é resolvido como "não confirmado".',
+      },
+      {
         icon: '💚',
         labelEn: 'Green Heart (guardrail)',
         labelPt: 'Coração Verde (guardrail)',

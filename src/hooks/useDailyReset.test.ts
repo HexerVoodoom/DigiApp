@@ -271,6 +271,100 @@ describe('performDailyReset — degeneration', () => {
   });
 });
 
+// Mirrors the "did you do yesterday's activities?" flow added to
+// useDailyReset.ts: computeYesterdayStats / applyDayOutcome / the pending gate
+// in performDailyReset. Simplified to `tasks` only (activities: [] in every
+// case here), matching how the other tests in this file exercise the reset.
+function computeStats(prev: any) {
+  const requirements = FORM_REQUIREMENTS[getStageLevel(prev.evolutionStage)];
+  const requiredToday = requirements.required;
+  const totalTasks = prev.tasks.length;
+  const dailyDone = prev.tasks.filter((t: any) => t.completed).length;
+  const dailyGoal = Math.min(totalTasks, requiredToday);
+  const energyWasFull = (prev.energyPoints ?? 0) >= requiredToday;
+  const completionRatio = dailyGoal > 0 ? Math.min(1, dailyDone / dailyGoal) : 1;
+  const heartsLost = Math.floor((1 - completionRatio) * prev.maxHealthPoints);
+  return { date: 'a-day', dailyDone, totalTasks, dailyGoal, requiredToday, heartsLost, energyWasFull };
+}
+
+function applyOutcome(prev: any, stats: any, confirmed: boolean) {
+  const dailyDone = confirmed ? Math.max(stats.dailyDone, stats.dailyGoal) : stats.dailyDone;
+  const dayWasPerfect = stats.totalTasks > 0 && dailyDone >= stats.dailyGoal && stats.energyWasFull;
+  const completionRatio = stats.dailyGoal > 0 ? Math.min(1, dailyDone / stats.dailyGoal) : 1;
+  const heartsLost = Math.floor((1 - completionRatio) * prev.maxHealthPoints);
+  const newHP = heartsLost > 0 ? Math.max(0, prev.healthPoints - heartsLost) : prev.healthPoints;
+  const newPerfectDays = dayWasPerfect ? prev.perfectDays + 1 : Math.max(0, prev.perfectDays - 1);
+  return { healthPoints: newHP, perfectDays: newPerfectDays, lastDayWasPerfect: dayWasPerfect, heartsLost };
+}
+
+function simulateDayTurn(prev: any) {
+  let base = prev;
+  if (prev.pendingActivityCheck) {
+    // Unanswered from a previous day turn — settle as "not confirmed" first.
+    base = { ...prev, ...applyOutcome(prev, prev.pendingActivityCheck, false) };
+  }
+  const resetTasks = base.tasks.map((t: any) => ({ ...t, completed: false }));
+  const stats = computeStats(base);
+  if (stats.heartsLost > 0) {
+    return { ...base, tasks: resetTasks, pendingActivityCheck: stats };
+  }
+  return { ...base, tasks: resetTasks, ...applyOutcome(base, stats, false), pendingActivityCheck: null };
+}
+
+function simulateConfirm(prev: any, confirmed: boolean) {
+  if (!prev.pendingActivityCheck) return prev;
+  const outcome = applyOutcome(prev, prev.pendingActivityCheck, confirmed);
+  return { ...prev, ...outcome, pendingActivityCheck: null };
+}
+
+describe('performDailyReset — "did you do yesterday\'s activities?" confirmation', () => {
+  it('raises a pending check instead of losing hearts immediately when tasks are incomplete', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: i < 1 }));
+    const result = simulateDayTurn({ ...baseState(), tasks, healthPoints: 3 });
+    expect(result.pendingActivityCheck).toBeTruthy();
+    expect(result.pendingActivityCheck.heartsLost).toBeGreaterThan(0);
+    // Hearts are NOT deducted yet — frozen until confirmed.
+    expect(result.healthPoints).toBe(3);
+  });
+
+  it('does not raise a pending check when the daily goal was met (nothing to lose)', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: true }));
+    const result = simulateDayTurn({ ...baseState(), tasks });
+    expect(result.pendingActivityCheck).toBeNull();
+    expect(result.healthPoints).toBe(3);
+  });
+
+  it('confirming "yes" clears the heart loss for that day', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: i < 1 }));
+    const pending = simulateDayTurn({ ...baseState(), tasks, healthPoints: 3 });
+    const confirmed = simulateConfirm(pending, true);
+    expect(confirmed.pendingActivityCheck).toBeNull();
+    expect(confirmed.healthPoints).toBe(3);
+  });
+
+  it('confirming "no" applies the originally computed heart loss', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: i < 1 }));
+    const pending = simulateDayTurn({ ...baseState(), tasks, healthPoints: 3 });
+    const expectedLoss = pending.pendingActivityCheck.heartsLost;
+    const declined = simulateConfirm(pending, false);
+    expect(declined.pendingActivityCheck).toBeNull();
+    expect(declined.healthPoints).toBe(3 - expectedLoss);
+  });
+
+  it('an unanswered pending check auto-resolves as "not confirmed" on the next day turn', () => {
+    const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: i < 1 }));
+    const day1 = simulateDayTurn({ ...baseState(), tasks, healthPoints: 3 });
+    expect(day1.pendingActivityCheck).toBeTruthy();
+    const expectedLoss = day1.pendingActivityCheck.heartsLost;
+
+    // App reopened after a 2nd missed day: the day-1 check settles as
+    // "not confirmed" (penalty applied), and a fresh check may be raised for
+    // the new "yesterday" only — never the older, already-resolved one.
+    const day2 = simulateDayTurn(day1);
+    expect(day2.healthPoints).toBe(3 - expectedLoss);
+  });
+});
+
 describe('performDailyReset — 💚 Coração Verde (guardian heart guardrail)', () => {
   it('charges +1 per perfect day, independent of the evolution perfectDays counter', () => {
     const tasks = Array.from({ length: 4 }, (_, i) => ({ id: `t${i}`, completed: true }));
