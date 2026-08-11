@@ -63,22 +63,27 @@ export function NotificationManager({
   // Android uses FCM (the WebView has no Web Push support); browsers/PWA use
   // Web Push VAPID.
   useEffect(() => {
-    const isNativeAndroid = Capacitor.getPlatform() === 'android';
+    try {
+      const isNativeAndroid = Capacitor.getPlatform() === 'android';
 
-    if (enabled) {
-      if (isNativeAndroid) {
-        registerForPushNotifications(digimonName, language, (title, body) => {
-          toast(title, { description: body });
-        });
+      if (enabled) {
+        if (isNativeAndroid) {
+          registerForPushNotifications(digimonName, language, (title, body) => {
+            toast(title, { description: body });
+          }).catch((err) => console.error('registerForPushNotifications failed:', err));
+        } else {
+          subscribeToPush(digimonName, language, poop).catch((err) => console.error('subscribeToPush failed:', err));
+        }
       } else {
-        subscribeToPush(digimonName, language, poop);
+        if (isNativeAndroid) {
+          unregisterFromPushNotifications().catch((err) => console.error('unregisterFromPushNotifications failed:', err));
+        } else {
+          unsubscribeFromPush().catch((err) => console.error('unsubscribeFromPush failed:', err));
+        }
       }
-    } else {
-      if (isNativeAndroid) {
-        unregisterFromPushNotifications();
-      } else {
-        unsubscribeFromPush();
-      }
+    } catch (err) {
+      // Any native-bridge hiccup here must never crash the whole app render.
+      console.error('Push subscription toggle failed:', err);
     }
     // poop is intentionally excluded — the dedicated resync effect below
     // handles it so the pushManager subscription isn't re-created every time.
@@ -92,11 +97,15 @@ export function NotificationManager({
   const poopKey = JSON.stringify(poop);
   useEffect(() => {
     if (!enabled) return;
-    const isNativeAndroid = Capacitor.getPlatform() === 'android';
-    if (isNativeAndroid) {
-      syncFcmPoopState(poop);
-    } else {
-      syncPushPoopState(poop);
+    try {
+      const isNativeAndroid = Capacitor.getPlatform() === 'android';
+      if (isNativeAndroid) {
+        syncFcmPoopState(poop).catch((err) => console.error('syncFcmPoopState failed:', err));
+      } else {
+        syncPushPoopState(poop).catch((err) => console.error('syncPushPoopState failed:', err));
+      }
+    } catch (err) {
+      console.error('Poop push resync failed:', err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, poopKey]);
@@ -104,19 +113,28 @@ export function NotificationManager({
   // Sync alarms when activities or tasks change
   useEffect(() => {
     if (!enabled) return;
-    syncActivityAlarms(activities, language);
-    syncTaskAlarms(tasks, language);
+    try {
+      syncActivityAlarms(activities, language);
+      syncTaskAlarms(tasks, language);
+    } catch (err) {
+      console.error('Alarm sync failed:', err);
+    }
   }, [activities, tasks, language, enabled]);
 
   // Check notifications every minute
   useEffect(() => {
     if (!enabled) return;
 
-    checkAndShowNotifications(userName, language, petIcon);
+    const run = () => {
+      try {
+        checkAndShowNotifications(userName, language, petIcon);
+      } catch (err) {
+        console.error('checkAndShowNotifications failed:', err);
+      }
+    };
 
-    const interval = setInterval(() => {
-      checkAndShowNotifications(userName, language, petIcon);
-    }, 60000);
+    run();
+    const interval = setInterval(run, 60000);
 
     return () => clearInterval(interval);
   }, [userName, language, enabled]);
@@ -177,36 +195,40 @@ export function NotificationManager({
 
     // Native Android: schedule via AlarmManager so they fire even with app closed
     if (Capacitor.isNativePlatform()) {
-      const ispt = language === 'pt-BR';
-      const nudgeTitle = ispt ? `📋 ${digimonName} está te chamando!` : `📋 ${digimonName} is calling you!`;
-      const nudgeBody = ispt ? 'Você ainda tem tarefas pendentes hoje! Vem cumprir! 💪' : 'You still have pending tasks today! Come finish them! 💪';
+      try {
+        const ispt = language === 'pt-BR';
+        const nudgeTitle = ispt ? `📋 ${digimonName} está te chamando!` : `📋 ${digimonName} is calling you!`;
+        const nudgeBody = ispt ? 'Você ainda tem tarefas pendentes hoje! Vem cumprir! 💪' : 'You still have pending tasks today! Come finish them! 💪';
 
-      if (completedSteps < totalRequired) {
-        DigiAlarm.scheduleAlarm({ id: 'pet-nudge-10', title: nudgeTitle, body: nudgeBody, scheduledTime: '10:00' }).catch(() => {});
-        DigiAlarm.scheduleAlarm({ id: 'pet-nudge-16', title: nudgeTitle, body: nudgeBody, scheduledTime: '16:00' }).catch(() => {});
-        DigiAlarm.scheduleAlarm({ id: 'pet-nudge-21', title: nudgeTitle, body: nudgeBody, scheduledTime: '21:00' }).catch(() => {});
-      } else {
-        DigiAlarm.cancelAlarm({ id: 'pet-nudge-10' }).catch(() => {});
-        DigiAlarm.cancelAlarm({ id: 'pet-nudge-16' }).catch(() => {});
-        DigiAlarm.cancelAlarm({ id: 'pet-nudge-21' }).catch(() => {});
+        if (completedSteps < totalRequired) {
+          DigiAlarm.scheduleAlarm({ id: 'pet-nudge-10', title: nudgeTitle, body: nudgeBody, scheduledTime: '10:00' }).catch(() => {});
+          DigiAlarm.scheduleAlarm({ id: 'pet-nudge-16', title: nudgeTitle, body: nudgeBody, scheduledTime: '16:00' }).catch(() => {});
+          DigiAlarm.scheduleAlarm({ id: 'pet-nudge-21', title: nudgeTitle, body: nudgeBody, scheduledTime: '21:00' }).catch(() => {});
+        } else {
+          DigiAlarm.cancelAlarm({ id: 'pet-nudge-10' }).catch(() => {});
+          DigiAlarm.cancelAlarm({ id: 'pet-nudge-16' }).catch(() => {});
+          DigiAlarm.cancelAlarm({ id: 'pet-nudge-21' }).catch(() => {});
+        }
+
+        DigiAlarm.scheduleAlarm({
+          id: 'pet-goodnight',
+          title: `🌙 ${digimonName} está desejando boa noite`,
+          body: ispt ? 'Durma bem! Até amanhã! 😴' : 'Sleep well! See you tomorrow! 😴',
+          scheduledTime: '22:00',
+        }).catch(() => {});
+
+        // Zera o contador de tarefas do widget na virada do dia (00:01), mesmo com o app fechado.
+        // Silencioso (sem notificação) — o receiver nativo já se re-agenda pro dia seguinte sozinho.
+        DigiAlarm.scheduleAlarm({
+          id: 'widget-daily-reset',
+          title: '',
+          body: '',
+          scheduledTime: '00:01',
+          widgetReset: true,
+        }).catch(() => {});
+      } catch (err) {
+        console.error('Native alarm scheduling failed:', err);
       }
-
-      DigiAlarm.scheduleAlarm({
-        id: 'pet-goodnight',
-        title: `🌙 ${digimonName} está desejando boa noite`,
-        body: ispt ? 'Durma bem! Até amanhã! 😴' : 'Sleep well! See you tomorrow! 😴',
-        scheduledTime: '22:00',
-      }).catch(() => {});
-
-      // Zera o contador de tarefas do widget na virada do dia (00:01), mesmo com o app fechado.
-      // Silencioso (sem notificação) — o receiver nativo já se re-agenda pro dia seguinte sozinho.
-      DigiAlarm.scheduleAlarm({
-        id: 'widget-daily-reset',
-        title: '',
-        body: '',
-        scheduledTime: '00:01',
-        widgetReset: true,
-      }).catch(() => {});
     }
 
     // Web/PWA: poll every minute and fire when the clock hits the target hour
@@ -257,8 +279,16 @@ export function NotificationManager({
       }
     };
 
-    checkPetNotifications();
-    const interval = setInterval(checkPetNotifications, 60000);
+    const runCheckPetNotifications = () => {
+      try {
+        checkPetNotifications();
+      } catch (err) {
+        console.error('checkPetNotifications failed:', err);
+      }
+    };
+
+    runCheckPetNotifications();
+    const interval = setInterval(runCheckPetNotifications, 60000);
     return () => clearInterval(interval);
   }, [enabled, digimonName, language, completedSteps, totalRequired]);
 

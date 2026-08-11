@@ -39,13 +39,14 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             Recarregar
           </button>
-          {import.meta.env.DEV && this.state.error && (
+          {this.state.error && (
             <pre style={{
               marginTop: '24px', padding: '12px', background: '#111',
               borderRadius: '8px', fontSize: '11px', color: '#f87171',
               maxWidth: '100%', overflow: 'auto', textAlign: 'left'
             }}>
               {this.state.error.message}
+              {import.meta.env.DEV && this.state.error.stack ? `\n\n${this.state.error.stack}` : ''}
             </pre>
           )}
         </div>
