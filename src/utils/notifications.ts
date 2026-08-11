@@ -167,7 +167,7 @@ export const subscribeToPush = async (
   poop?: PoopPushState,
 ): Promise<boolean> => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
-  if (Notification.permission !== 'granted') return false;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
 
   try {
     const reg = await navigator.serviceWorker.ready;
@@ -220,7 +220,7 @@ export const subscribeToPush = async (
 // merges, see functions/api/subscribe.js).
 export const syncPushPoopState = async (poop: PoopPushState): Promise<void> => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (Notification.permission !== 'granted') return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   try {
     const reg = await navigator.serviceWorker.ready;
